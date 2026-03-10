@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { PlaceType, ReviewsSort } from "./types.js";
+import type { ReviewsSort, FindPlacesApifyInput } from "./types.js";
 
 const client = new Anthropic();
 
@@ -7,25 +7,22 @@ const client = new Anthropic();
 // Публичные типы
 // ---------------------------------------------------------------------------
 
-export interface IntentParams {
-  type: PlaceType;
-  keyword?: string;
-  radius?: number;
-  minprice?: 0 | 1 | 2 | 3 | 4;
-  maxprice?: 0 | 1 | 2 | 3 | 4;
-  minRating?: number;
-  minReviewCount?: number;
-  maxPlaces?: number;
-  maxReviewsPerPlace?: number;
-  reviewsSort?: ReviewsSort;
-  // Только для Apify-пути
-  lat?: number;
-  lng?: number;
-  query?: string;
-}
+export type ApifyIntentParams = Pick<
+  FindPlacesApifyInput,
+  | "query"
+  | "lat"
+  | "lng"
+  | "maxItems"
+  | "zoom"
+  | "country"
+  | "minRating"
+  | "minReviewCount"
+  | "maxReviewsPerPlace"
+  | "reviewsSort"
+>;
 
 export interface ParseIntentResult {
-  params: IntentParams;
+  params: ApifyIntentParams;
   reasoning: string;
 }
 
@@ -36,96 +33,71 @@ export interface ParseIntentResult {
 const TOOL: Anthropic.Tool = {
   name: "set_search_params",
   description:
-    "Устанавливает параметры поиска заведений на основе запроса пользователя",
+    "Устанавливает параметры поиска заведений через Apify Google Places scraper на основе запроса пользователя",
   input_schema: {
     type: "object",
     properties: {
-      type: {
-        type: "string",
-        enum: [
-          "restaurant",
-          "cafe",
-          "bar",
-          "bakery",
-          "meal_takeaway",
-          "meal_delivery",
-        ],
-        description: "Тип заведения",
-      },
-      keyword: {
+      query: {
         type: "string",
         description:
-          "Ключевое слово на английском для уточнения поиска: кухня (sushi, pizza), " +
-          "атмосфера (romantic, cozy, rooftop), концепция (brunch, wine bar). " +
-          "Не указывай если нет конкретного уточнения.",
+          "Поисковая строка на английском для Google Maps. " +
+          "Составляй из типа заведения и уточнений: 'cozy cafe', 'sushi restaurant', 'budget bakery', 'rooftop bar'. " +
+          "Если нет уточнений — просто тип: 'cafe', 'restaurant'.",
       },
-      radius: {
+      lat: {
         type: "number",
         description:
-          "Радиус поиска в метрах. Не указывай если пользователь не уточнял (по умолчанию 500). " +
-          "300 — 'рядом/шаговая доступность', 1000–2000 — 'в районе/в городе'.",
+          "Широта центра поиска. Извлекай только если координаты явно указаны в тексте пользователя.",
       },
-      minprice: {
+      lng: {
         type: "number",
-        enum: [0, 1, 2, 3, 4],
         description:
-          "Минимальный ценовой уровень. Указывай только если пользователь хочет именно дорогое место.",
+          "Долгота центра поиска. Извлекай только если координаты явно указаны в тексте пользователя.",
       },
-      maxprice: {
+      maxItems: {
         type: "number",
-        enum: [0, 1, 2, 3, 4],
         description:
-          "Максимальный ценовой уровень. 0=бесплатно, 1=$, 2=$$, 3=$$$, 4=$$$$. " +
-          "'бюджетное'→1, 'недорого'→2, 'умеренно'→3. Не указывай если цена не важна.",
+          "Максимальное число заведений, которые вернёт scraper. " +
+          "По умолчанию не указывай (система использует 150). " +
+          "Уменьши до 30–50 если нужен быстрый результат. Увеличь до 200+ для широкого охвата.",
+      },
+      zoom: {
+        type: "number",
+        description:
+          "Уровень зума карты (12 по умолчанию). " +
+          "14–15 — 'рядом/в шаговой доступности'. 10–11 — 'по всему городу'.",
+      },
+      country: {
+        type: "string",
+        description:
+          "Код страны ISO 3166-1 alpha-2 (например 'VN', 'RU', 'US'). " +
+          "Указывай только если страна явно следует из запроса.",
       },
       minRating: {
         type: "number",
         description:
-          "Минимальный рейтинг (по умолчанию 4.2). " +
+          "Минимальный рейтинг заведения (по умолчанию 4.2). " +
           "4.5+ для особых случаев (романтический ужин, деловая встреча). " +
-          "4.0 для быстрой еды.",
+          "4.0 для быстрой еды или бюджетных мест.",
       },
       minReviewCount: {
         type: "number",
         description:
-          "Минимум отзывов (по умолчанию 15). Увеличь до 50–100 если важна проверенность места.",
-      },
-      maxPlaces: {
-        type: "number",
-        enum: [20, 40, 60],
-        description:
-          "Количество заведений для обработки. Не указывай без причины (по умолчанию 20).",
+          "Минимальное число отзывов (по умолчанию 15). " +
+          "Увеличь до 50–100 если важна проверенность места.",
       },
       maxReviewsPerPlace: {
         type: "number",
         description:
-          "Количество отзывов на заведение (по умолчанию 20). " +
-          "50 для глубокого анализа, 10-20 для быстрой проверки.",
+          "Число отзывов на заведение для анализа (по умолчанию 20). " +
+          "50 для глубокого анализа, 10 для быстрой проверки.",
       },
       reviewsSort: {
         type: "string",
         enum: ["newest", "mostRelevant", "highestRanking", "lowestRanking"],
         description:
-          "'newest' — самые новые, по умолчанию. 'mostRelevant' — наиболее актуальные. " +
-          "'highestRanking' — только лучшие. 'lowestRanking' — анализ недостатков. " +
-          "Отправляй только если пользователь просит явно",
-      },
-      lat: {
-        type: "number",
-        description:
-          "Широта из запроса пользователя. Извлекай только если координаты явно указаны в тексте.",
-      },
-      lng: {
-        type: "number",
-        description:
-          "Долгота из запроса пользователя. Извлекай только если координаты явно указаны в тексте.",
-      },
-      query: {
-        type: "string",
-        description:
-          "Поисковая строка для Apify places scraper на английском. " +
-          "Составляй из type + keyword: 'cozy cafe', 'sushi restaurant', 'budget bakery'. " +
-          "Если keyword не задан — просто тип: 'cafe', 'restaurant'.",
+          "'newest' — самые новые (по умолчанию). 'highestRanking' — только лучшие. " +
+          "'lowestRanking' — анализ недостатков. Указывай только если пользователь просит явно.",
       },
       reasoning: {
         type: "string",
@@ -133,18 +105,18 @@ const TOOL: Anthropic.Tool = {
           "Краткое объяснение выбранных параметров (2–4 предложения).",
       },
     },
-    required: ["type", "reasoning"],
+    required: ["query", "reasoning"],
   },
 };
 
-const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания. Пользователь описывает, что ищет, а ты переводишь это в параметры поиска по Google Maps.
+const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания через Google Maps. Пользователь описывает, что ищет, а ты составляешь параметры для Apify Google Places scraper.
 
 Принципы:
-- Устанавливай только те параметры, которые явно следуют из запроса. Лишние параметры ухудшают результат.
-- Цена: "недорого" ≠ "дёшево". "Недорогое кафе" → maxprice 2. "Бюджетное" → maxprice 1. "Готов доплатить за атмосферу" → maxprice 3.
-- Keyword должен быть конкретным и на английском: "pizza", "romantic", "rooftop terrace", "vegan". Не пиши абстрактное вроде "good food".
-- Если запрос подразумевает особое место (романтический ужин, деловая встреча, день рождения) — повышай minRating до 4.5.
-- reviewsSort не трогай без причины — по умолчанию система использует оптимальное значение.`;
+- Главное — поисковая строка (query). Она должна быть конкретной и на английском: 'sushi restaurant', 'cozy wine bar', 'vegan cafe', 'cheap ramen'. Не используй абстракции вроде 'good food'.
+- Тип заведения (restaurant, cafe, bar, bakery и т.д.) всегда включай в query как основу.
+- Добавляй в query уточнения по кухне, атмосфере или концепции только если они явно есть в запросе.
+- Не указывай параметры без необходимости — лишние ограничения ухудшают результат.
+- Для особых случаев (романтический ужин, деловая встреча) повышай minRating до 4.5.`;
 
 // ---------------------------------------------------------------------------
 // Основная функция
@@ -167,7 +139,7 @@ export async function parseIntent(prompt: string): Promise<ParseIntentResult> {
     throw new Error("Claude не вернул параметры поиска");
   }
 
-  const { reasoning, ...params } = toolUse.input as IntentParams & {
+  const { reasoning, ...params } = toolUse.input as ApifyIntentParams & {
     reasoning: string;
   };
 
