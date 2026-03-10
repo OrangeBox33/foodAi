@@ -106,6 +106,56 @@ export interface PlaceForAI {
   reviews: ReviewForAI[];
 }
 
+// --- Apify: places scraper (альтернатива Google Places API) ---
+
+export interface FindPlacesApifyInput {
+  // Обязательные (вместо url)
+  query: string;
+  lat: number;
+  lng: number;
+
+  // Параметры поиска мест
+  maxItems?: number;        // default 150
+  country?: string;
+  lang?: string;
+  zoom?: number;            // default 12
+
+  // Общие с FindPlacesInput
+  userPrompt?: string;
+  maxReviewsPerPlace?: number;
+
+  // Фильтры
+  minRating?: number;
+  minReviewCount?: number;
+
+  // Параметры Apify reviews scraper
+  reviewsSort?: ReviewsSort;
+  reviewsOrigin?: ReviewsOrigin;
+  personalData?: boolean;
+  reviewsStartDate?: string;
+
+  [key: string]: unknown;
+}
+
+// Сырой объект заведения из Apify compass/crawler-google-places
+export interface ApifyPlace {
+  placeId: string;
+  title: string;
+  totalScore: number | null;
+  reviewsCount: number | null;
+  categoryName: string | null;
+  categories: string[];
+  price: string | null;
+  address: string | null;
+  location: { lat: number; lng: number } | null;
+  website: string | null;
+  phone: string | null;
+  openingHours: { day: string; hours: string }[] | null;
+  imageUrl: string | null;
+  url: string;
+  scrapedAt: string;
+}
+
 // --- Apify: compass/google-maps-reviews-scraper ---
 
 export type ReviewsSort = "newest" | "mostRelevant" | "highestRanking" | "lowestRanking";
