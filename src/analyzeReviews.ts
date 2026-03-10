@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PlaceForAI, PlaceData } from "./types.js";
+import { CLAUDE_MODEL, ANALYZE_MAX_TOKENS } from "./constants.js";
 
 const client = new Anthropic();
 
@@ -11,9 +12,6 @@ export interface PlaceRecommendation {
   placeId: string;
   name: string;
   whyItFits: string;
-  pros: string[];
-  cons: string[];
-  notableQuote: string;
   verdict: string;
 }
 
@@ -28,7 +26,8 @@ export interface AnalysisResult {
 
 const TOOL: Anthropic.Tool = {
   name: "give_recommendations",
-  description: "Выдаёт финальные рекомендации заведений на основе анализа отзывов",
+  description:
+    "Выдаёт финальные рекомендации заведений на основе анализа отзывов",
   input_schema: {
     type: "object",
     properties: {
@@ -42,28 +41,20 @@ const TOOL: Anthropic.Tool = {
             name: { type: "string", description: "Название заведения" },
             whyItFits: {
               type: "string",
-              description: "1–2 предложения: почему именно это заведение подходит под запрос пользователя",
-            },
-            pros: {
-              type: "array",
-              items: { type: "string" },
-              description: "2–4 конкретных плюса, подтверждённых отзывами",
-            },
-            cons: {
-              type: "array",
-              items: { type: "string" },
-              description: "1–2 минуса или предупреждения из отзывов. Пустой массив если нет явных минусов.",
-            },
-            notableQuote: {
-              type: "string",
-              description: "Дословная цитата из одного отзыва, лучше всего передающая атмосферу или ключевое качество",
+              description:
+                "Коротко тегами почему именно это заведение подходит под запрос пользователя. Пример: #тихо #романтика #быстро",
             },
             verdict: {
               type: "string",
               description: "Одно финальное предложение-вывод для пользователя",
             },
           },
-          required: ["placeId", "name", "whyItFits", "pros", "cons", "notableQuote", "verdict"],
+          required: [
+            "placeId",
+            "name",
+            "whyItFits",
+            "verdict",
+          ],
         },
       },
       summary: {
@@ -81,15 +72,19 @@ const TOOL: Anthropic.Tool = {
 // Сериализация данных — компактный текстовый формат для экономии токенов
 // ---------------------------------------------------------------------------
 
-function serializePlaces(places: PlaceForAI[], placesData: PlaceData[]): string {
+function serializePlaces(
+  places: PlaceForAI[],
+  placesData: PlaceData[],
+): string {
   const dataMap = new Map(placesData.map((p) => [p.place_id, p]));
 
   return places
     .map((place) => {
       const data = dataMap.get(place.placeId);
-      const priceLabel = data?.price_level !== undefined
-        ? "$".repeat(data.price_level) || "бесплатно"
-        : place.price ?? "н/д";
+      const priceLabel =
+        data?.price_level !== undefined
+          ? "$".repeat(data.price_level) || "бесплатно"
+          : (place.price ?? "н/д");
       const address = data?.vicinity ?? "";
 
       const header = [
@@ -106,19 +101,17 @@ function serializePlaces(places: PlaceForAI[], placesData: PlaceData[]): string 
         .map((r) => {
           const badges = [
             r.isLocalGuide ? "LocalGuide" : "",
-            r.reviewerNumberOfReviews ? `${r.reviewerNumberOfReviews} отз.` : "",
+            r.reviewerNumberOfReviews
+              ? `${r.reviewerNumberOfReviews} отз.`
+              : "",
             r.likesCount > 0 ? `👍${r.likesCount}` : "",
-            r.visitedIn ? `был: ${r.visitedIn}` : "",
           ]
             .filter(Boolean)
             .join(", ");
 
           const date = r.publishedAtDate.slice(0, 10);
-          const owner = r.responseFromOwnerText
-            ? `\n   [Ответ заведения]: "${r.responseFromOwnerText.slice(0, 120)}..."`
-            : "";
 
-          return `  ★${r.stars} [${badges || "—"}] (${date}): "${r.text}"${owner}`;
+          return `  ★${r.stars} [${badges || "—"}] (${date}): "${r.text}"`;
         })
         .join("\n");
 
@@ -152,7 +145,7 @@ const SYSTEM_PROMPT = `Ты — эксперт по ресторанам и ка
 export async function analyzeReviews(
   places: PlaceForAI[],
   placesData: PlaceData[],
-  userPrompt: string
+  userPrompt: string,
 ): Promise<AnalysisResult> {
   const serialized = serializePlaces(places, placesData);
 
@@ -163,8 +156,8 @@ export async function analyzeReviews(
 ${serialized}`;
 
   const response = await client.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 2048,
+    model: CLAUDE_MODEL,
+    max_tokens: ANALYZE_MAX_TOKENS,
     system: SYSTEM_PROMPT,
     tools: [TOOL],
     tool_choice: { type: "tool", name: "give_recommendations" },
@@ -172,7 +165,7 @@ ${serialized}`;
   });
 
   const toolUse = response.content.find(
-    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
   );
   if (!toolUse) {
     throw new Error("Claude не вернул рекомендации");

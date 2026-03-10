@@ -1,9 +1,14 @@
 import { ApifyClient } from "apify-client";
 import type { ApifyPlace, FindPlacesApifyInput, PlaceData } from "./types.js";
+import {
+  DEFAULT_MAP_ZOOM,
+  DEFAULT_LANGUAGE,
+  DEFAULT_MAX_PLACES,
+} from "./constants.js";
 
 const ACTOR_ID = "compass/crawler-google-places";
 
-export async function fetchPlacesViaApify(
+export async function fetchNearbyPlacesApify(
   input: FindPlacesApifyInput,
 ): Promise<ApifyPlace[]> {
   const token = process.env.APIFY_API_TOKEN;
@@ -15,11 +20,11 @@ export async function fetchPlacesViaApify(
 
   const actorInput = {
     searchStringsArray: [input.query],
-    lat: "11.945639",
-    lng: "108.436421",
-    maxCrawledPlacesPerSearch: 40,
-    zoom: 12,
-    language: "en",
+    lat: String(input.lat),
+    lng: String(input.lng),
+    maxCrawledPlacesPerSearch: input.maxItems ?? DEFAULT_MAX_PLACES,
+    zoom: input.zoom ?? DEFAULT_MAP_ZOOM,
+    language: input.lang ?? DEFAULT_LANGUAGE,
   };
 
   const run = await client.actor(ACTOR_ID).call(actorInput);

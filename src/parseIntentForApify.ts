@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ReviewsSort, FindPlacesApifyInput } from "./types.js";
+import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "./constants.js";
 
 const client = new Anthropic();
 
@@ -122,10 +123,12 @@ const SYSTEM_PROMPT = `Ты — помощник для поиска завед�
 // Основная функция
 // ---------------------------------------------------------------------------
 
-export async function parseIntent(prompt: string): Promise<ParseIntentResult> {
+export async function parseIntentForApify(
+  prompt: string,
+): Promise<ParseIntentResult> {
   const response = await client.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 1024,
+    model: CLAUDE_MODEL,
+    max_tokens: PARSE_INTENT_MAX_TOKENS,
     system: SYSTEM_PROMPT,
     tools: [TOOL],
     tool_choice: { type: "tool", name: "set_search_params" },

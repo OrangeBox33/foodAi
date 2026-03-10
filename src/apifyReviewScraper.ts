@@ -1,5 +1,11 @@
 import { ApifyClient } from "apify-client";
 import type { ApifyScraperInput, ApifyReview } from "./types.js";
+import {
+  DEFAULT_REVIEWS_SORT,
+  DEFAULT_LANGUAGE,
+  DEFAULT_REVIEWS_ORIGIN,
+  DEFAULT_PERSONAL_DATA,
+} from "./constants.js";
 
 const ACTOR_ID = "compass/google-maps-reviews-scraper";
 
@@ -14,10 +20,10 @@ export async function scrapeReviews(input: ApifyScraperInput): Promise<ApifyRevi
   const actorInput = {
     placeIds: input.placeIds,
     maxReviews: input.maxReviews,
-    reviewsSort: input.reviewsSort ?? "newest",
-    language: input.language ?? "en",
-    reviewsOrigin: input.reviewsOrigin ?? "all",
-    personalData: input.personalData ?? true,
+    reviewsSort: input.reviewsSort ?? DEFAULT_REVIEWS_SORT,
+    language: input.language ?? DEFAULT_LANGUAGE,
+    reviewsOrigin: input.reviewsOrigin ?? DEFAULT_REVIEWS_ORIGIN,
+    personalData: input.personalData ?? DEFAULT_PERSONAL_DATA,
     ...(input.reviewsStartDate && { reviewsStartDate: input.reviewsStartDate }),
   };
 

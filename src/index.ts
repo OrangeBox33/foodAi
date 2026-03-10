@@ -1,17 +1,18 @@
 import "dotenv/config";
-import { resolveLocation } from "./resolveLocation.js";
-import { fetchNearbyPlaces } from "./placesSearch.js";
-import { filterPlaces } from "./filter.js";
-import { fetchPlacesViaApify, filterApifyPlaces } from "./apifyPlacesSearch.js";
-import { scrapeReviews } from "./apifyScraper.js";
+import {
+  fetchNearbyPlacesApify,
+  filterApifyPlaces,
+} from "./apifyPlacesScraper.js";
+import { scrapeReviews } from "./apifyReviewScraper.js";
 import { mapReviewsForAI } from "./mapForAI.js";
-import { parseIntent } from "./parseIntent.js";
 import { analyzeReviews } from "./analyzeReviews.js";
-import type {
-  FindPlacesInput,
-  FindPlacesApifyInput,
-  FindPlacesResult,
-} from "./types.js";
+import {
+  DEFAULT_MAX_REVIEWS_PER_PLACE,
+  DEFAULT_MIN_RATING,
+  DEFAULT_MIN_REVIEW_COUNT,
+} from "./constants.js";
+import type { FindPlacesApifyInput, FindPlacesResult } from "./types.js";
+import { parseIntentForApify } from "./parseIntentForApify.js";
 
 export type {
   FindPlacesInput,
@@ -21,62 +22,18 @@ export type {
   PlaceType,
 } from "./types.js";
 export type { ApifyPlace } from "./types.js";
-export { parseIntent } from "./parseIntent.js";
-export type { ParseIntentResult, IntentParams } from "./parseIntent.js";
-
-export async function findPlaces(
-  input: FindPlacesInput,
-): Promise<FindPlacesResult> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
-    throw new Error("GOOGLE_PLACES_API_KEY не задан в переменных окружения");
-  }
-
-  const maxReviewsPerPlace = input.maxReviewsPerPlace ?? 20;
-  const minRating = input.minRating ?? 4.2;
-  const minReviewCount = input.minReviewCount ?? 15;
-
-  const mergedInput: FindPlacesInput = {
-    opennow: true,
-    minprice: 0,
-    maxprice: 3,
-    ...input,
-  };
-
-  const location = await resolveLocation(mergedInput.url);
-
-  const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
-
-  const places = filterPlaces(rawPlaces, { minRating, minReviewCount });
-
-  const placeIds = places.map((p) => p.place_id);
-
-  const reviews = await scrapeReviews({
-    placeIds,
-    maxReviews: maxReviewsPerPlace,
-    reviewsSort: input.reviewsSort,
-    reviewsOrigin: input.reviewsOrigin,
-    personalData: input.personalData,
-    reviewsStartDate: input.reviewsStartDate,
-    language: input.language,
-  });
-
-  const placesForAI = mapReviewsForAI(reviews);
-
-  const userPrompt = input.userPrompt ?? "";
-  const analysis = await analyzeReviews(placesForAI, places, userPrompt);
-
-  return { places, placesForAI, analysis };
-}
+export { parseIntent } from "./google/parseIntent.js";
+export type { ParseIntentResult, IntentParams } from "./google/parseIntent.js";
 
 export async function findPlacesApify(
   input: FindPlacesApifyInput,
 ): Promise<FindPlacesResult> {
-  const maxReviewsPerPlace = input.maxReviewsPerPlace ?? 20;
-  const minRating = Math.min(input.minRating ?? 4.0, 4.3);
-  const minReviewCount = input.minReviewCount ?? 25;
+  const maxReviewsPerPlace =
+    input.maxReviewsPerPlace ?? DEFAULT_MAX_REVIEWS_PER_PLACE;
+  const minRating = input.minRating ?? DEFAULT_MIN_RATING;
+  const minReviewCount = input.minReviewCount ?? DEFAULT_MIN_REVIEW_COUNT;
 
-  const rawPlaces = await fetchPlacesViaApify(input);
+  const rawPlaces = await fetchNearbyPlacesApify(input);
 
   const places = filterApifyPlaces(rawPlaces, { minRating, minReviewCount });
 
@@ -116,29 +73,21 @@ if (isMain) {
     `Режим: ${useApify ? "Apify places scraper" : "Google Places API"}\n`,
   );
 
-  const { params, reasoning } = await parseIntent(userPrompt);
+  const { params, reasoning } = await parseIntentForApify(userPrompt);
   console.log("Параметры от Claude:", params);
   console.log("Reasoning:", reasoning, "\n");
 
   let result: FindPlacesResult;
 
-  if (useApify) {
-    if (!params.lat || !params.lng) {
-      throw new Error(
-        "Укажи координаты в запросе, например: '...координаты 11.945639, 108.436421'",
-      );
-    }
-    result = await findPlacesApify({
-      query: params.query ?? params.type ?? "cafe",
-      lat: params.lat,
-      lng: params.lng,
-      userPrompt,
-      ...params,
-    });
-  } else {
-    const url = "https://maps.app.goo.gl/Y1iWGCsNDk5cGuaJA";
-    result = await findPlaces({ url, userPrompt, ...params });
+  if (!params.lat || !params.lng) {
+    throw new Error(
+      "Укажи координаты в запросе, например: '...координаты 11.945639, 108.436421'",
+    );
   }
+  result = await findPlacesApify({
+    userPrompt,
+    ...params,
+  });
 
   console.log(`Найдено заведений: ${result.places.length}`);
   for (const place of result.places) {
