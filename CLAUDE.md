@@ -26,26 +26,29 @@ APIFY_API_TOKEN=...
 
 ## Architecture
 
-This is a TypeScript Node.js library that finds and recommends nearby food venues from a Google Maps URL. The pipeline in `src/index.ts` runs these steps in sequence:
+This is a TypeScript Node.js library that finds and recommends nearby food venues. There are two pipelines; the primary one uses Apify for both place discovery and review scraping.
 
-1. **`resolveLocation`** — follows redirects on a Google Maps short URL (e.g. `maps.app.goo.gl/...`) and extracts `{lat, lng}` coordinates via regex patterns.
+### Primary pipeline: `findPlacesApify` (`src/index.ts`)
 
-2. **`fetchNearbyPlaces`** — calls Google Places Nearby Search API using the coordinates and `FindPlacesInput` parameters. Handles pagination (up to 3 pages / 60 results) with a 2s delay between pages (required by Google).
+1. **`parseIntentForApify`** (`src/parseIntentForApify.ts`) — converts a free-text user query (in Russian) into structured `ApifyIntentParams` using `claude-haiku-4-5` and the `set_search_params` tool.
 
-3. **`filterPlaces`** — filters raw Google API results by `minRating` and `minReviewCount`, maps `GooglePlace` → `PlaceData`.
+2. **`fetchNearbyPlacesApify`** (`src/apifyPlacesScraper.ts`) — calls Apify actor `compass/crawler-google-places` with `{lat, lng, query, maxItems, zoom}`. Returns raw `ApifyPlace[]`.
 
-4. **`scrapeReviews`** — calls Apify actor `compass/google-maps-reviews-scraper` with the filtered `place_id` list to fetch full review text. This is a blocking Apify run that can take significant time.
+3. **`filterApifyPlaces`** — filters by `minRating` and `minReviewCount`, maps `ApifyPlace` → `PlaceData`. Price level is parsed from `$`/`$$`/`$$$` strings.
 
-5. **`mapReviewsForAI`** — groups flat `ApifyReview[]` by `placeId` into `PlaceForAI[]`, strips ads and reviews without text, prefers `textTranslated` over `text`.
+4. **`scrapeReviews`** (`src/apifyReviewScraper.ts`) — calls Apify actor `compass/google-maps-reviews-scraper` with the filtered `place_id` list. Blocking run, can take significant time.
 
-6. **`analyzeReviews`** — sends serialized place+review data to `claude-haiku-4-5` via tool use (`give_recommendations`), returns structured `AnalysisResult` with top-3 `PlaceRecommendation[]` and a `summary`.
+5. **`mapReviewsForAI`** (`src/mapForAI.ts`) — groups flat `ApifyReview[]` by `placeId` into `PlaceForAI[]`, strips ads and reviews without text, prefers `textTranslated` over `text`.
+
+6. **`analyzeReviews`** (`src/analyzeReviews.ts`) — sends serialized place+review data to `claude-haiku-4-5` via tool use (`give_recommendations`), returns `AnalysisResult` with top-3 `PlaceRecommendation[]` and a `summary`.
+
+### Legacy pipeline: `findPlaces` (`src/google/`)
+
+Uses a Google Maps short URL instead of coordinates. `resolveLocation` follows redirects and extracts `{lat, lng}`, then calls Google Places Nearby Search API (paginated, 2s delay between pages), and shares the same review scraping and AI analysis steps. Requires `GOOGLE_PLACES_API_KEY`.
 
 ### AI Integration
 
-Both AI calls use `@anthropic-ai/sdk` with forced tool use (`tool_choice: { type: "tool", name: "..." }`):
-
-- **`parseIntent`** (`parseIntent.ts`) — converts a free-text user query (in Russian) into structured `IntentParams` for the search pipeline using `claude-haiku-4-5` and the `set_search_params` tool.
-- **`analyzeReviews`** (`analyzeReviews.ts`) — analyzes scraped reviews against user intent using `claude-haiku-4-5` and the `give_recommendations` tool.
+All AI calls use `@anthropic-ai/sdk` with forced tool use (`tool_choice: { type: "tool", name: "..." }`). The `parseIntent` in `src/google/parseIntent.ts` is the legacy variant for the Google Places pipeline; `parseIntentForApify` in `src/parseIntentForApify.ts` is used by the primary pipeline.
 
 ### Module System
 
