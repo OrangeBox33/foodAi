@@ -42,7 +42,7 @@ export async function findPlaces(
 
   const placeIds = places.map((p) => p.place_id);
 
-  const reviews = await scrapeReviews({
+  const { reviews, apifyCostUsd } = await scrapeReviews({
     placeIds,
     maxReviews: maxReviewsPerPlace,
     reviewsSort: input.reviewsSort,
@@ -57,5 +57,5 @@ export async function findPlaces(
   const userPrompt = input.userPrompt ?? "";
   const analysis = await analyzeReviews(placesForAI, places, userPrompt);
 
-  return { places, placesForAI, analysis };
+  return { places, placesForAI, analysis, apifyCostUsd };
 }

@@ -28,7 +28,8 @@ export async function findPlacesApify(
   const minRating = input.minRating ?? DEFAULT_MIN_RATING;
   const minReviewCount = input.minReviewCount ?? DEFAULT_MIN_REVIEW_COUNT;
 
-  const rawPlaces = await fetchNearbyPlacesApify(input);
+  const { places: rawPlaces, apifyCostUsd } =
+    await fetchNearbyPlacesApify(input);
 
   const filteredRaw = filterApifyPlaces(rawPlaces, {
     minRating,
@@ -42,7 +43,7 @@ export async function findPlacesApify(
   const userPrompt = input.userPrompt ?? "";
   const analysis = await analyzeReviews(placesForAI, places, userPrompt);
 
-  return { places, placesForAI, analysis };
+  return { places, placesForAI, analysis, apifyCostUsd };
 }
 
 function fmtUsageLine(label: string, usage: TokenUsage, note = ""): string {
@@ -63,8 +64,10 @@ function printUsageReport(
   extractUsage: TokenUsage,
   rankUsage: TokenUsage,
   placesCount: number,
+  apifyCostUsd: number,
 ): void {
   const total = sumUsage([parseUsage, extractUsage, rankUsage]);
+  const totalCostUsd = calcCost(total) + apifyCostUsd;
   const divider = "─".repeat(62);
 
   console.log("\n=== ТОКЕНЫ И СТОИМОСТЬ ===");
@@ -73,8 +76,10 @@ function printUsageReport(
     fmtUsageLine("extractSignals:", extractUsage, `(${placesCount} завед.)`),
   );
   console.log(fmtUsageLine("rankPlaces:", rankUsage));
+  console.log(`${"Apify scraper:".padEnd(18)}  $${apifyCostUsd.toFixed(4)}`);
   console.log(divider);
-  console.log(fmtUsageLine("Итого:", total));
+  console.log(fmtUsageLine("Claude (итого):", total));
+  console.log(`${"Всего:".padEnd(18)}  $${totalCostUsd.toFixed(4)}`);
 }
 
 // Запуск напрямую: tsx src/index.ts
@@ -118,5 +123,6 @@ if (isMain) {
     result.analysis.usage.extractSignals,
     result.analysis.usage.rankPlaces,
     result.placesForAI.length,
+    result.apifyCostUsd,
   );
 }

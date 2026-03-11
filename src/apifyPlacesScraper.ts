@@ -15,7 +15,7 @@ export function extractPlaceId(url: string): string {
 
 export async function fetchNearbyPlacesApify(
   input: FindPlacesApifyInput,
-): Promise<ApifyPlace[]> {
+): Promise<{ places: ApifyPlace[]; apifyCostUsd: number }> {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) {
     throw new Error("APIFY_API_TOKEN не задан в переменных окружения");
@@ -40,7 +40,10 @@ export async function fetchNearbyPlacesApify(
 
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-  return items as unknown as ApifyPlace[];
+  return {
+    places: items as unknown as ApifyPlace[],
+    apifyCostUsd: run.usageTotalUsd ?? 0,
+  };
 }
 
 export function mapApifyPlaceToPlaceData(place: ApifyPlace): PlaceData {

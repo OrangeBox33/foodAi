@@ -60,6 +60,7 @@ export interface FindPlacesResult {
   places: PlaceData[];
   placesForAI: PlaceForAI[];
   analysis: import("./analyzeReviews.js").AnalysisResult;
+  apifyCostUsd: number;
 }
 
 // Сырой объект заведения из Google Places API

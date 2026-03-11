@@ -11,7 +11,7 @@ const ACTOR_ID = "compass/google-maps-reviews-scraper";
 
 export async function scrapeReviews(
   input: ApifyScraperInput,
-): Promise<ApifyReview[]> {
+): Promise<{ reviews: ApifyReview[]; apifyCostUsd: number }> {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) {
     throw new Error("APIFY_API_TOKEN не задан в переменных окружения");
@@ -33,5 +33,8 @@ export async function scrapeReviews(
 
   const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
-  return items as unknown as ApifyReview[];
+  return {
+    reviews: items as unknown as ApifyReview[],
+    apifyCostUsd: run.usageTotalUsd ?? 0,
+  };
 }
