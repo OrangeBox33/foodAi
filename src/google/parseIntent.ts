@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { PlaceType } from "../types.js";
-import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "../constants.js";
+import type { PlaceType } from "../common/types.js";
+import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "../common/constants.js";
 
 const client = new Anthropic();
 

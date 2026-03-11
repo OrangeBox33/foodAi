@@ -7,11 +7,11 @@ import {
   DEFAULT_OPENNOW,
   DEFAULT_MIN_PRICE,
   DEFAULT_MAX_PRICE,
-} from "../constants.js";
-import { filterPlaces } from "../filter.js";
-import { mapFlatReviewsForAI } from "../mapForAI.js";
+} from "../common/constants.js";
+import { filterPlaces } from "../common/helpers/filter.js";
+import { mapFlatReviewsForAI } from "../common/helpers/mapForAI.js";
 import { resolveLocation } from "../resolveLocation.js";
-import { FindPlacesInput, FindPlacesResult } from "../types.js";
+import { FindPlacesInput, FindPlacesResult } from "../common/types.js";
 import { fetchNearbyPlaces } from "./placesSearch.js";
 
 export async function findPlaces(

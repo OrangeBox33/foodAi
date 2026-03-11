@@ -1,4 +1,4 @@
-import type { GooglePlace, PlaceData } from "./types.js";
+import type { GooglePlace, PlaceData } from "../types.js";
 
 interface FilterOptions {
   minRating: number;
@@ -22,13 +22,13 @@ function mapToPlaceData(place: GooglePlace): PlaceData {
 
 export function filterPlaces(
   rawPlaces: GooglePlace[],
-  options: FilterOptions
+  options: FilterOptions,
 ): PlaceData[] {
   return rawPlaces
     .filter(
       (place) =>
         (place.rating ?? 0) >= options.minRating &&
-        (place.user_ratings_total ?? 0) >= options.minReviewCount
+        (place.user_ratings_total ?? 0) >= options.minReviewCount,
     )
     .map(mapToPlaceData);
 }

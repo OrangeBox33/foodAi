@@ -1,10 +1,14 @@
 import { ApifyClient } from "apify-client";
-import type { ApifyPlace, FindPlacesApifyInput, PlaceData } from "./types.js";
+import type {
+  ApifyPlace,
+  FindPlacesApifyInput,
+  PlaceData,
+} from "./common/types.js";
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_MAX_PLACES,
   DEFAULT_MAX_REVIEWS_PER_PLACE,
-} from "./constants.js";
+} from "./common/constants.js";
 
 const ACTOR_ID = "compass/crawler-google-places";
 

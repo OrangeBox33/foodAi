@@ -1,11 +1,11 @@
 import { ApifyClient } from "apify-client";
-import type { ApifyScraperInput, ApifyReview } from "./types.js";
+import type { ApifyScraperInput, ApifyReview } from "./common/types.js";
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_PERSONAL_DATA,
   DEFAULT_REVIEWS_ORIGIN,
   DEFAULT_REVIEWS_SORT,
-} from "./constants.js";
+} from "./common/constants.js";
 
 const ACTOR_ID = "compass/google-maps-reviews-scraper";
 

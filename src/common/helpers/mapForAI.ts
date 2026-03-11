@@ -1,5 +1,11 @@
-import type { ApifyPlace, ApifyPlaceReview, ApifyReview, PlaceForAI, ReviewForAI } from "./types.js";
-import { extractPlaceId } from "./apifyPlacesScraper.js";
+import type {
+  ApifyPlace,
+  ApifyPlaceReview,
+  ApifyReview,
+  PlaceForAI,
+  ReviewForAI,
+} from "../types.js";
+import { extractPlaceId } from "../../apifyPlacesScraper.js";
 
 function mapEmbeddedReview(review: ApifyPlaceReview): ReviewForAI {
   return {

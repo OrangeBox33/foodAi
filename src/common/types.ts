@@ -57,7 +57,7 @@ export interface PlaceData {
 export interface FindPlacesResult {
   places: PlaceData[];
   placesForAI: PlaceForAI[];
-  analysis: import("./analyzeReviews.js").AnalysisResult;
+  analysis: import("../analyzeReviews.js").AnalysisResult;
   apifyCostUsd: number;
 }
 

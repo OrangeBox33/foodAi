@@ -1,11 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { PlaceForAI, PlaceData } from "./types.js";
+import type { PlaceForAI, PlaceData } from "./common/types.js";
 import {
   CLAUDE_MODEL,
   EXTRACT_MAX_TOKENS,
   ANALYZE_MAX_TOKENS,
-} from "./constants.js";
-import { fromApiUsage, sumUsage, type TokenUsage } from "./usage.js";
+} from "./common/constants.js";
+import {
+  fromApiUsage,
+  sumUsage,
+  type TokenUsage,
+} from "./common/helpers/usage.js";
 
 const client = new Anthropic();
 
@@ -258,7 +262,11 @@ async function extractPlaceSignals(
 
   if (reviewsWithText.length < MIN_REVIEWS_FOR_EXTRACTION) {
     return {
-      signals: { placeId: place.placeId, name: place.title, insufficientData: true },
+      signals: {
+        placeId: place.placeId,
+        name: place.title,
+        insufficientData: true,
+      },
       usage: ZERO_USAGE,
     };
   }
@@ -280,7 +288,11 @@ async function extractPlaceSignals(
   );
   if (!toolUse) {
     return {
-      signals: { placeId: place.placeId, name: place.title, insufficientData: true },
+      signals: {
+        placeId: place.placeId,
+        name: place.title,
+        insufficientData: true,
+      },
       usage: fromApiUsage(response.usage),
     };
   }
@@ -359,12 +371,20 @@ export async function analyzeReviews(
       extractUsages.push(result.value.usage);
     } else {
       // Вызов упал — помечаем как insufficientData, не роняем весь пайплайн
-      signals.push({ placeId: places[i].placeId, name: places[i].title, insufficientData: true });
+      signals.push({
+        placeId: places[i].placeId,
+        name: places[i].title,
+        insufficientData: true,
+      });
     }
   });
 
   // Stage 2: финальное ранжирование по карточкам
-  const { recommendations, summary, usage: rankUsage } = await rankPlaces(signals, userPrompt);
+  const {
+    recommendations,
+    summary,
+    usage: rankUsage,
+  } = await rankPlaces(signals, userPrompt);
 
   return {
     recommendations,

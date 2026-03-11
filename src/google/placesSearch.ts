@@ -3,12 +3,12 @@ import type {
   GooglePlace,
   GooglePlacesResponse,
   LatLng,
-} from "../types.js";
+} from "../common/types.js";
 import {
   DEFAULT_MAX_PLACES,
   DEFAULT_SEARCH_RADIUS,
   PAGINATION_DELAY_MS,
-} from "../constants.js";
+} from "../common/constants.js";
 
 const NEARBY_SEARCH_URL =
   "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
