@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { FindPlacesApifyInput } from "./types.js";
 import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "./constants.js";
+import { fromApiUsage, type TokenUsage } from "./usage.js";
 
 const client = new Anthropic();
 
@@ -16,6 +17,7 @@ export type ApifyIntentParams = Pick<
 export interface ParseIntentResult {
   params: ApifyIntentParams;
   reasoning: string;
+  usage: TokenUsage;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,5 +110,5 @@ export async function parseIntentForApify(
     reasoning: string;
   };
 
-  return { params, reasoning };
+  return { params, reasoning, usage: fromApiUsage(response.usage) };
 }

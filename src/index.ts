@@ -9,6 +9,7 @@ import { analyzeReviews } from "./analyzeReviews.js";
 import { DEFAULT_MIN_RATING, DEFAULT_MIN_REVIEW_COUNT } from "./constants.js";
 import type { FindPlacesApifyInput, FindPlacesResult } from "./types.js";
 import { parseIntentForApify } from "./parseIntentForApify.js";
+import { calcCost, sumUsage, type TokenUsage } from "./usage.js";
 
 export type {
   FindPlacesInput,
@@ -44,17 +45,53 @@ export async function findPlacesApify(
   return { places, placesForAI, analysis };
 }
 
+function fmtUsageLine(label: string, usage: TokenUsage, note = ""): string {
+  const n = (v: number) => v.toLocaleString("ru-RU");
+  const cost = calcCost(usage);
+  const parts = [
+    label.padEnd(18),
+    `вход ${n(usage.inputTokens).padStart(7)}`,
+    `выход ${n(usage.outputTokens).padStart(5)}`,
+    cost > 0 ? `$${cost.toFixed(4)}` : "$0.0000",
+  ];
+  if (note) parts.push(note);
+  return parts.join("  ");
+}
+
+function printUsageReport(
+  parseUsage: TokenUsage,
+  extractUsage: TokenUsage,
+  rankUsage: TokenUsage,
+  placesCount: number,
+): void {
+  const total = sumUsage([parseUsage, extractUsage, rankUsage]);
+  const divider = "─".repeat(62);
+
+  console.log("\n=== ТОКЕНЫ И СТОИМОСТЬ ===");
+  console.log(fmtUsageLine("parseIntent:", parseUsage));
+  console.log(
+    fmtUsageLine("extractSignals:", extractUsage, `(${placesCount} завед.)`),
+  );
+  console.log(fmtUsageLine("rankPlaces:", rankUsage));
+  console.log(divider);
+  console.log(fmtUsageLine("Итого:", total));
+}
+
 // Запуск напрямую: tsx src/index.ts
 const isMain =
   process.argv[1]?.endsWith("index.ts") ||
   process.argv[1]?.endsWith("index.js");
 if (isMain) {
   const userPrompt =
-    'Хочу посидеть с друзьями и поесть хорошей вьетнамской кухни. Качество и вкус еды важны. рис с курицей или карри. красивое местечко. уют, ламповость. цены средние или даже выше url="https://www.google.com/maps/search/cafe/@11.9480696,108.4301579,15z" поиск по 70 заведениям, по 15 отзывов в каждом.';
-
+    'тестовый запуск url="https://www.google.com/maps/search/cafe/@11.9480696,108.4301579,15z" поиск по 3 заведениям, по 15 отзывов в каждом.';
+  // Хочу посидеть с друзьями и поесть хорошей вьетнамской кухни. Качество и вкус еды важны. рис с курицей или карри. красивое местечко. уют, ламповость. цены средние или даже выше url="https://www.google.com/maps/search/cafe/@11.9480696,108.4301579,15z" поиск по 70 заведениям, по 15 отзывов в каждом.
   console.log(`Запрос: "${userPrompt}"\n`);
 
-  const { params, reasoning } = await parseIntentForApify(userPrompt);
+  const {
+    params,
+    reasoning,
+    usage: parseUsage,
+  } = await parseIntentForApify(userPrompt);
   console.log("Параметры от Claude:", params);
   console.log("Reasoning:", reasoning, "\n");
 
@@ -75,4 +112,11 @@ if (isMain) {
     console.log(`   ${rec.whyItFits}`);
     console.log(`   → ${rec.verdict}\n`);
   }
+
+  printUsageReport(
+    parseUsage,
+    result.analysis.usage.extractSignals,
+    result.analysis.usage.rankPlaces,
+    result.placesForAI.length,
+  );
 }

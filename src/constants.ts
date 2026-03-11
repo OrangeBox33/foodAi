@@ -30,7 +30,10 @@ export const CLAUDE_MODEL = "claude-haiku-4-5";
 /** Лимит токенов для parseIntent */
 export const PARSE_INTENT_MAX_TOKENS = 1024;
 
-/** Лимит токенов для analyzeReviews */
+/** Лимит токенов для Stage 1 — извлечение сигналов одного заведения */
+export const EXTRACT_MAX_TOKENS = 1024;
+
+/** Лимит токенов для Stage 2 — финальное ранжирование */
 export const ANALYZE_MAX_TOKENS = 4096;
 
 // ---------------------------------------------------------------------------
