@@ -12,7 +12,6 @@ import { parseIntentForApify } from "./parseIntentForApify.js";
 import { calcCost, sumUsage, type TokenUsage } from "./usage.js";
 
 export type {
-  FindPlacesInput,
   FindPlacesApifyInput,
   FindPlacesResult,
   PlaceData,

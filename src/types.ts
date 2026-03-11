@@ -34,8 +34,6 @@ export interface FindPlacesInput {
   reviewsOrigin?: ReviewsOrigin;
   personalData?: boolean;
   reviewsStartDate?: string;
-
-  [key: string]: unknown;
 }
 
 export interface LatLng {
@@ -164,7 +162,11 @@ export interface ApifyPlace {
 
 // --- Apify: compass/google-maps-reviews-scraper ---
 
-export type ReviewsSort = "newest" | "mostRelevant" | "highestRanking" | "lowestRanking";
+export type ReviewsSort =
+  | "newest"
+  | "mostRelevant"
+  | "highestRanking"
+  | "lowestRanking";
 export type ReviewsOrigin = "all" | "google";
 
 export interface ApifyScraperInput {

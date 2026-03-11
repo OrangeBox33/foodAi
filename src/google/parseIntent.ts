@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { PlaceType, ReviewsSort } from "../types.js";
+import type { PlaceType } from "../types.js";
 import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "../constants.js";
 
 const client = new Anthropic();
@@ -18,11 +18,6 @@ export interface IntentParams {
   minReviewCount?: number;
   maxPlaces?: number;
   maxReviewsPerPlace?: number;
-  reviewsSort?: ReviewsSort;
-  // Только для Apify-пути
-  lat?: number;
-  lng?: number;
-  query?: string;
 }
 
 export interface ParseIntentResult {
@@ -63,8 +58,7 @@ const TOOL: Anthropic.Tool = {
       radius: {
         type: "number",
         description:
-          "Радиус поиска в метрах. Не указывай если пользователь не уточнял (по умолчанию 500). " +
-          "300 — 'рядом/шаговая доступность', 1000–2000 — 'в районе/в городе'.",
+          "Радиус поиска в метрах. Не указывай если пользователь не уточнял. ",
       },
       minprice: {
         type: "number",
@@ -76,8 +70,9 @@ const TOOL: Anthropic.Tool = {
         type: "number",
         enum: [0, 1, 2, 3, 4],
         description:
-          "Максимальный ценовой уровень. 0=бесплатно, 1=$, 2=$$, 3=$$$, 4=$$$$. " +
-          "'бюджетное'→1, 'недорого'→2, 'умеренно'→3. Не указывай если цена не важна.",
+          "Максимальный ценовой уровень. " +
+          "'бюджетное'→1, 'средняя цена'→2, 'дорого'→3. 'очень дорого'→4. Не указывай если цена не важна. " +
+          "По умолчанию maxprice=3",
       },
       minRating: {
         type: "number",
@@ -103,35 +98,10 @@ const TOOL: Anthropic.Tool = {
           "Количество отзывов на заведение (по умолчанию 20). " +
           "50 для глубокого анализа, 10-20 для быстрой проверки.",
       },
-      reviewsSort: {
-        type: "string",
-        enum: ["newest", "mostRelevant", "highestRanking", "lowestRanking"],
-        description:
-          "'newest' — самые новые, по умолчанию. 'mostRelevant' — наиболее актуальные. " +
-          "'highestRanking' — только лучшие. 'lowestRanking' — анализ недостатков. " +
-          "Отправляй только если пользователь просит явно",
-      },
-      lat: {
-        type: "number",
-        description:
-          "Широта из запроса пользователя. Извлекай только если координаты явно указаны в тексте.",
-      },
-      lng: {
-        type: "number",
-        description:
-          "Долгота из запроса пользователя. Извлекай только если координаты явно указаны в тексте.",
-      },
-      query: {
-        type: "string",
-        description:
-          "Поисковая строка для Apify places scraper на английском. " +
-          "Составляй из type + keyword: 'cozy cafe', 'sushi restaurant', 'budget bakery'. " +
-          "Если keyword не задан — просто тип: 'cafe', 'restaurant'.",
-      },
       reasoning: {
         type: "string",
         description:
-          "Краткое объяснение выбранных параметров (2–4 предложения).",
+          "Краткое объяснение выбранных параметров (1-2 предложения).",
       },
     },
     required: ["type", "reasoning"],
@@ -142,10 +112,9 @@ const SYSTEM_PROMPT = `Ты — помощник для поиска завед�
 
 Принципы:
 - Устанавливай только те параметры, которые явно следуют из запроса. Лишние параметры ухудшают результат.
-- Цена: "недорого" ≠ "дёшево". "Недорогое кафе" → maxprice 2. "Бюджетное" → maxprice 1. "Готов доплатить за атмосферу" → maxprice 3.
+- Если запрос подразумевает недорогое место, то ставь maxprice=2. 
 - Keyword должен быть конкретным и на английском: "pizza", "romantic", "rooftop terrace", "vegan". Не пиши абстрактное вроде "good food".
-- Если запрос подразумевает особое место (романтический ужин, деловая встреча, день рождения) — повышай minRating до 4.5.
-- reviewsSort не трогай без причины — по умолчанию система использует оптимальное значение.`;
+- Если запрос подразумевает особое место (романтический ужин, деловая встреча, день рождения) — повышай minRating до 4.5.`;
 
 // ---------------------------------------------------------------------------
 // Основная функция
