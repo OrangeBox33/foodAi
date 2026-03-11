@@ -14,23 +14,10 @@ export const DEFAULT_MIN_REVIEW_COUNT = 25;
 // Apify Places scraper (compass/crawler-google-places)
 // ---------------------------------------------------------------------------
 
-/** Уровень зума карты Google Maps при поиске */
-export const DEFAULT_MAP_ZOOM = 13;
-
 /** Язык результатов поиска и отзывов */
 export const DEFAULT_LANGUAGE = "en";
-
-// ---------------------------------------------------------------------------
-// Apify Reviews scraper (compass/google-maps-reviews-scraper)
-// ---------------------------------------------------------------------------
-
-/** Сортировка отзывов по умолчанию */
 export const DEFAULT_REVIEWS_SORT = "newest";
-
-/** Источник отзывов: все платформы */
 export const DEFAULT_REVIEWS_ORIGIN = "all";
-
-/** Включать персональные данные рецензентов */
 export const DEFAULT_PERSONAL_DATA = false;
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ReviewsSort, FindPlacesApifyInput } from "./types.js";
+import type { FindPlacesApifyInput } from "./types.js";
 import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "./constants.js";
 
 const client = new Anthropic();
@@ -10,16 +10,7 @@ const client = new Anthropic();
 
 export type ApifyIntentParams = Pick<
   FindPlacesApifyInput,
-  | "query"
-  | "lat"
-  | "lng"
-  | "maxItems"
-  | "zoom"
-  | "country"
-  | "minRating"
-  | "minReviewCount"
-  | "maxReviewsPerPlace"
-  | "reviewsSort"
+  "url" | "maxPlaces" | "maxReviewsPerPlace" | "minRating" | "minReviewCount"
 >;
 
 export interface ParseIntentResult {
@@ -38,41 +29,26 @@ const TOOL: Anthropic.Tool = {
   input_schema: {
     type: "object",
     properties: {
-      query: {
+      url: {
         type: "string",
         description:
-          "Поисковая строка на английском для Google Maps. " +
-          "Составляй из типа заведения и уточнений: 'cozy cafe', 'sushi restaurant', 'budget bakery', 'rooftop bar'. " +
-          "Если нет уточнений — просто тип: 'cafe', 'restaurant'.",
+          "Google Maps search URL вида 'https://www.google.com/maps/search/KEYWORD/@lat,lng,zoom'. " +
+          'Координаты и zoom извлекай точно из URL пользователя (формат url="..."), не меняй их. ' +
+          "KEYWORD замени на подходящий поисковый запрос на английском, исходя из намерения пользователя " +
+          "(например: restaurant, cafe, pizza, sushi, bar, bakery, street+food и т.п.). ",
       },
-      lat: {
-        type: "number",
-        description:
-          "Широта центра поиска. Извлекай только если координаты явно указаны в тексте пользователя.",
-      },
-      lng: {
-        type: "number",
-        description:
-          "Долгота центра поиска. Извлекай только если координаты явно указаны в тексте пользователя.",
-      },
-      maxItems: {
+      maxPlaces: {
         type: "number",
         description:
           "Максимальное число заведений, которые вернёт scraper. " +
-          "По умолчанию не указывай (система использует 150). " +
-          "Уменьши до 30–50 если нужен быстрый результат. Увеличь до 200+ для широкого охвата.",
+          "По умолчанию не указывай (система использует 30). " +
+          "Уменьши до 10–20 для быстрого результата. Увеличь до 50+ для широкого охвата.",
       },
-      zoom: {
+      maxReviewsPerPlace: {
         type: "number",
         description:
-          "Уровень зума карты (12 по умолчанию). " +
-          "14–15 — 'рядом/в шаговой доступности'. 10–11 — 'по всему городу'.",
-      },
-      country: {
-        type: "string",
-        description:
-          "Код страны ISO 3166-1 alpha-2 (например 'VN', 'RU', 'US'). " +
-          "Указывай только если страна явно следует из запроса.",
+          "Число отзывов на заведение для анализа (по умолчанию 20). " +
+          "50 для глубокого анализа, 10 для быстрой проверки.",
       },
       minRating: {
         type: "number",
@@ -84,21 +60,8 @@ const TOOL: Anthropic.Tool = {
       minReviewCount: {
         type: "number",
         description:
-          "Минимальное число отзывов (по умолчанию 15). " +
+          "Минимальное число отзывов (по умолчанию 25). " +
           "Увеличь до 50–100 если важна проверенность места.",
-      },
-      maxReviewsPerPlace: {
-        type: "number",
-        description:
-          "Число отзывов на заведение для анализа (по умолчанию 20). " +
-          "50 для глубокого анализа, 10 для быстрой проверки.",
-      },
-      reviewsSort: {
-        type: "string",
-        enum: ["newest", "mostRelevant", "highestRanking", "lowestRanking"],
-        description:
-          "'newest' — самые новые (по умолчанию). 'highestRanking' — только лучшие. " +
-          "'lowestRanking' — анализ недостатков. Указывай только если пользователь просит явно.",
       },
       reasoning: {
         type: "string",
@@ -106,16 +69,15 @@ const TOOL: Anthropic.Tool = {
           "Краткое объяснение выбранных параметров (2–4 предложения).",
       },
     },
-    required: ["query", "reasoning"],
+    required: ["url", "reasoning"],
   },
 };
 
-const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания через Google Maps. Пользователь описывает, что ищет, а ты составляешь параметры для Apify Google Places scraper.
+const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания через Google Maps. Пользователь описывает, что ищет, и передаёт Google Maps URL. Ты составляешь параметры для Apify Google Places scraper.
 
 Принципы:
-- Главное — поисковая строка (query). Она должна быть конкретной и на английском: 'sushi restaurant', 'cozy wine bar', 'vegan cafe', 'cheap ramen'. Не используй абстракции вроде 'good food'.
-- Тип заведения (restaurant, cafe, bar, bakery и т.д.) всегда включай в query как основу.
-- Добавляй в query уточнения по кухне, атмосфере или концепции только если они явно есть в запросе.
+- Координаты и zoom из URL не меняй.
+- Keyword в URL замени на подходящий английский запрос по намерению пользователя (restaurant, cafe, sushi, pizza, bar и т.п.). Если намерение неясно — оставь keyword из оригинального URL.
 - Не указывай параметры без необходимости — лишние ограничения ухудшают результат.
 - Для особых случаев (романтический ужин, деловая встреча) повышай minRating до 4.5.`;
 

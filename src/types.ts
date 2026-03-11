@@ -109,51 +109,56 @@ export interface PlaceForAI {
 // --- Apify: places scraper (альтернатива Google Places API) ---
 
 export interface FindPlacesApifyInput {
-  // Обязательные (вместо url)
-  query: string;
-  lat: number;
-  lng: number;
+  // Google Maps search URL (e.g. "https://www.google.com/maps/search/cafe/@lat,lng,17z")
+  url: string;
 
-  // Параметры поиска мест
-  maxItems?: number;        // default 150
-  country?: string;
-  lang?: string;
-  zoom?: number;            // default 12
-
-  // Общие с FindPlacesInput
   userPrompt?: string;
   maxReviewsPerPlace?: number;
+  maxPlaces?: number;
 
   // Фильтры
   minRating?: number;
   minReviewCount?: number;
 
-  // Параметры Apify reviews scraper
+  // Параметры Apify scraper
   reviewsSort?: ReviewsSort;
   reviewsOrigin?: ReviewsOrigin;
   personalData?: boolean;
   reviewsStartDate?: string;
+  language?: string;
 
   [key: string]: unknown;
 }
 
-// Сырой объект заведения из Apify compass/crawler-google-places
+// Встроенный отзыв в выдаче compass/crawler-google-places
+export interface ApifyPlaceReview {
+  reviewerNumberOfReviews: number | null;
+  isLocalGuide: boolean | null;
+  text: string | null;
+  textTranslated: string | null;
+  publishAt: string;
+  publishedAtDate: string;
+  likesCount: number;
+  reviewOrigin: string;
+  stars: number;
+}
+
+// Сырой объект заведения из Apify compass/crawler-google-places (с вложенными отзывами)
 export interface ApifyPlace {
-  placeId: string;
   title: string;
   totalScore: number | null;
   reviewsCount: number | null;
-  categoryName: string | null;
-  categories: string[];
-  price: string | null;
-  address: string | null;
-  location: { lat: number; lng: number } | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  countryCode: string | null;
   website: string | null;
   phone: string | null;
-  openingHours: { day: string; hours: string }[] | null;
-  imageUrl: string | null;
+  categories: string[];
   url: string;
-  scrapedAt: string;
+  categoryName: string | null;
+  price: string | null;
+  reviews: ApifyPlaceReview[];
 }
 
 // --- Apify: compass/google-maps-reviews-scraper ---

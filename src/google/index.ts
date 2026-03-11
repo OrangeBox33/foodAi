@@ -9,7 +9,7 @@ import {
   DEFAULT_MAX_PRICE,
 } from "../constants.js";
 import { filterPlaces } from "../filter.js";
-import { mapReviewsForAI } from "../mapForAI.js";
+import { mapFlatReviewsForAI } from "../mapForAI.js";
 import { resolveLocation } from "../resolveLocation.js";
 import { FindPlacesInput, FindPlacesResult } from "../types.js";
 import { fetchNearbyPlaces } from "./placesSearch.js";
@@ -52,7 +52,7 @@ export async function findPlaces(
     language: input.language,
   });
 
-  const placesForAI = mapReviewsForAI(reviews);
+  const placesForAI = mapFlatReviewsForAI(reviews);
 
   const userPrompt = input.userPrompt ?? "";
   const analysis = await analyzeReviews(placesForAI, places, userPrompt);

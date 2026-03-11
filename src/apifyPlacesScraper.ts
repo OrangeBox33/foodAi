@@ -1,12 +1,17 @@
 import { ApifyClient } from "apify-client";
 import type { ApifyPlace, FindPlacesApifyInput, PlaceData } from "./types.js";
 import {
-  DEFAULT_MAP_ZOOM,
   DEFAULT_LANGUAGE,
   DEFAULT_MAX_PLACES,
+  DEFAULT_MAX_REVIEWS_PER_PLACE,
 } from "./constants.js";
 
 const ACTOR_ID = "compass/crawler-google-places";
+
+export function extractPlaceId(url: string): string {
+  const match = url.match(/query_place_id=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : url;
+}
 
 export async function fetchNearbyPlacesApify(
   input: FindPlacesApifyInput,
@@ -19,12 +24,16 @@ export async function fetchNearbyPlacesApify(
   const client = new ApifyClient({ token });
 
   const actorInput = {
-    searchStringsArray: [input.query],
-    lat: String(input.lat),
-    lng: String(input.lng),
-    maxCrawledPlacesPerSearch: input.maxItems ?? DEFAULT_MAX_PLACES,
-    zoom: input.zoom ?? DEFAULT_MAP_ZOOM,
-    language: input.lang ?? DEFAULT_LANGUAGE,
+    startUrls: [{ url: input.url }],
+    maxCrawledPlacesPerSearch: input.maxPlaces ?? DEFAULT_MAX_PLACES,
+    maxReviews: input.maxReviewsPerPlace ?? DEFAULT_MAX_REVIEWS_PER_PLACE,
+    language: input.language ?? DEFAULT_LANGUAGE,
+    reviewsSort: input.reviewsSort ?? "newest",
+    reviewsOrigin: input.reviewsOrigin ?? "all",
+    skipClosedPlaces: true,
+    scrapeReviewsPersonalData: input.personalData ?? false,
+    maxImages: 0,
+    maxQuestions: 0,
   };
 
   const run = await client.actor(ACTOR_ID).call(actorInput);
@@ -35,19 +44,19 @@ export async function fetchNearbyPlacesApify(
 }
 
 export function mapApifyPlaceToPlaceData(place: ApifyPlace): PlaceData {
+  const placeId = extractPlaceId(place.url);
+  const vicinity = [place.street, place.city].filter(Boolean).join(", ");
+
   return {
-    place_id: place.placeId,
+    place_id: placeId,
     name: place.title,
     rating: place.totalScore ?? 0,
     user_ratings_total: place.reviewsCount ?? 0,
     price_level: parsePriceLevel(place.price),
-    vicinity: place.address ?? "",
+    vicinity,
     types: place.categories ?? [],
     geometry: {
-      location: {
-        lat: place.location?.lat ?? 0,
-        lng: place.location?.lng ?? 0,
-      },
+      location: { lat: 0, lng: 0 },
     },
   };
 }
@@ -55,22 +64,18 @@ export function mapApifyPlaceToPlaceData(place: ApifyPlace): PlaceData {
 export function filterApifyPlaces(
   places: ApifyPlace[],
   options: { minRating: number; minReviewCount: number },
-): PlaceData[] {
-  return places
-    .filter(
-      (p) =>
-        (p.totalScore ?? 0) >= options.minRating &&
-        (p.reviewsCount ?? 0) >= options.minReviewCount,
-    )
-    .map(mapApifyPlaceToPlaceData);
+): ApifyPlace[] {
+  return places.filter(
+    (p) =>
+      (p.totalScore ?? 0) >= options.minRating &&
+      (p.reviewsCount ?? 0) >= options.minReviewCount,
+  );
 }
 
 function parsePriceLevel(priceLevel: string | null): number | undefined {
   if (!priceLevel) return undefined;
-  // "$" → 1, "$$" → 2, "$$$" → 3, "$$$$" → 4
   const match = priceLevel.match(/^\$+$/);
   if (match) return priceLevel.length;
-  // Если число
   const num = parseInt(priceLevel, 10);
   if (!isNaN(num)) return num;
   return undefined;
