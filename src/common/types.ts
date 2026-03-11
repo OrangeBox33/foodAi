@@ -6,30 +6,29 @@ export type PlaceType =
   | "meal_takeaway"
   | "meal_delivery";
 
-export interface FindPlacesInput {
+export interface FindPlacesGoogleInput {
   // Обязательные
   url: string;
   type: PlaceType;
   userPrompt?: string;
 
-  // Основные необязательные
+  // Google Places Nearby Search
   keyword?: string;
   radius?: number;
-  maxReviewsPerPlace?: number;
+  opennow?: boolean;
+  minprice?: 0 | 1 | 2 | 3 | 4;
+  maxprice?: 0 | 1 | 2 | 3 | 4;
+  language?: string;
+
+  // Лимиты
   maxPlaces?: number;
+  maxReviewsPerPlace?: number;
 
   // Фильтры
   minRating?: number;
   minReviewCount?: number;
 
-  // Дополнительные параметры Google Places Nearby Search
-  opennow?: boolean;
-  minprice?: 0 | 1 | 2 | 3 | 4;
-  maxprice?: 0 | 1 | 2 | 3 | 4;
-  language?: string;
-  pagetoken?: never; // управляется внутренне
-
-  // Параметры Apify scraper
+  // Параметры Apify reviews scraper (compass/google-maps-reviews-scraper)
   reviewsSort?: ReviewsSort;
   reviewsOrigin?: ReviewsOrigin;
   personalData?: boolean;

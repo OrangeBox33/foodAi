@@ -6,16 +6,16 @@
     "start": "tsx src/index.ts",
     "build": "tsc"
   },
+   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "apify-client": "^2.0.0",
+    "dotenv": "^16.0.0",
+    "node-telegram-bot-api": "^0.67.0"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/node-telegram-bot-api": "^0.64.14",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
-    "apify-client": "^2.0.0",
-    "dotenv": "^16.0.0",
-    "node-telegram-bot-api": "^0.67.0"
   }
 }

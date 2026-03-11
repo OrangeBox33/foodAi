@@ -1,5 +1,5 @@
-import { analyzeReviews } from "../analyzeReviews.js";
-import { scrapeReviews } from "../apifyReviewScraper.js";
+import { analyzeReviews } from "./analyzeReviews.js";
+import { scrapeReviews } from "./apifyReviewScraper.js";
 import {
   DEFAULT_MAX_REVIEWS_PER_PLACE,
   DEFAULT_MIN_RATING,
@@ -7,15 +7,15 @@ import {
   DEFAULT_OPENNOW,
   DEFAULT_MIN_PRICE,
   DEFAULT_MAX_PRICE,
-} from "../common/constants.js";
-import { filterPlaces } from "../common/helpers/filter.js";
-import { mapFlatReviewsForAI } from "../common/helpers/mapForAI.js";
-import { resolveLocation } from "../resolveLocation.js";
-import { FindPlacesInput, FindPlacesResult } from "../common/types.js";
-import { fetchNearbyPlaces } from "./placesSearch.js";
+} from "./common/constants.js";
+import { filterPlaces } from "./common/helpers/filter.js";
+import { mapFlatReviewsForAI } from "./common/helpers/mapForAI.js";
+import { FindPlacesGoogleInput, FindPlacesResult } from "./common/types.js";
+import { fetchNearbyPlaces } from "./placesSearchGoogle.js";
+import { resolveLocation } from "./resolveLocation.js";
 
-export async function findPlaces(
-  input: FindPlacesInput,
+export async function mainGoogle(
+  input: FindPlacesGoogleInput,
 ): Promise<FindPlacesResult> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
@@ -27,7 +27,7 @@ export async function findPlaces(
   const minRating = input.minRating ?? DEFAULT_MIN_RATING;
   const minReviewCount = input.minReviewCount ?? DEFAULT_MIN_REVIEW_COUNT;
 
-  const mergedInput: FindPlacesInput = {
+  const mergedInput: FindPlacesGoogleInput = {
     opennow: DEFAULT_OPENNOW,
     minprice: DEFAULT_MIN_PRICE,
     maxprice: DEFAULT_MAX_PRICE,

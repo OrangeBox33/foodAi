@@ -1,35 +1,28 @@
 import type {
-  FindPlacesInput,
   GooglePlace,
   GooglePlacesResponse,
   LatLng,
-} from "../common/types.js";
+  PlaceType,
+} from "./common/types.js";
 import {
   DEFAULT_MAX_PLACES,
   DEFAULT_SEARCH_RADIUS,
   PAGINATION_DELAY_MS,
-} from "../common/constants.js";
+} from "./common/constants.js";
 
 const NEARBY_SEARCH_URL =
   "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
 
-// Внутренние параметры, не передаваемые напрямую в Google API
-const INTERNAL_PARAMS = new Set([
-  "url",
-  "maxPlaces",
-  "maxReviewsPerPlace",
-  "minRating",
-  "minReviewCount",
-  "type",
-  "radius",
-  "keyword",
-  "pagetoken",
-  // Apify-параметры
-  "reviewsSort",
-  "reviewsOrigin",
-  "personalData",
-  "reviewsStartDate",
-]);
+export interface GoogleNearbySearchParams {
+  type: PlaceType;
+  keyword?: string;
+  radius?: number;
+  opennow?: boolean;
+  minprice?: number;
+  maxprice?: number;
+  language?: string;
+  maxPlaces?: number;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -60,48 +53,43 @@ async function fetchPage(
 
 export async function fetchNearbyPlaces(
   location: LatLng,
-  input: FindPlacesInput,
+  params: GoogleNearbySearchParams,
   apiKey: string,
 ): Promise<GooglePlace[]> {
-  const maxPlaces = input.maxPlaces ?? DEFAULT_MAX_PLACES;
+  const maxPlaces = params.maxPlaces ?? DEFAULT_MAX_PLACES;
   const results: GooglePlace[] = [];
 
-  // Базовые параметры запроса
   const baseParams: Record<string, string> = {
     key: apiKey,
     location: `${location.lat},${location.lng}`,
-    radius: String(input.radius ?? DEFAULT_SEARCH_RADIUS),
-    type: input.type,
+    radius: String(params.radius ?? DEFAULT_SEARCH_RADIUS),
+    type: params.type,
     rankby: "prominence",
   };
 
-  if (input.keyword) {
-    baseParams.keyword = input.keyword;
-  }
-
-  // Прокидываем все остальные допустимые параметры из input
-  for (const [key, value] of Object.entries(input)) {
-    if (!INTERNAL_PARAMS.has(key) && value !== undefined && value !== null) {
-      baseParams[key] = String(value);
-    }
-  }
+  if (params.keyword) baseParams.keyword = params.keyword;
+  if (params.opennow) baseParams.opennow = "true";
+  if (params.minprice !== undefined)
+    baseParams.minprice = String(params.minprice);
+  if (params.maxprice !== undefined)
+    baseParams.maxprice = String(params.maxprice);
+  if (params.language) baseParams.language = params.language;
 
   let pagetoken: string | undefined;
   let pagesLoaded = 0;
   const maxPages = Math.ceil(Math.min(maxPlaces, 60) / 20);
 
   do {
-    const params = new URLSearchParams(baseParams);
+    const urlParams = new URLSearchParams(baseParams);
     if (pagetoken) {
-      params.set("pagetoken", pagetoken);
+      urlParams.set("pagetoken", pagetoken);
     }
 
-    const data = await fetchPage(params);
+    const data = await fetchPage(urlParams);
     results.push(...data.results);
     pagetoken = data.next_page_token;
     pagesLoaded++;
 
-    // Google требует задержку перед использованием pagetoken
     if (pagetoken && pagesLoaded < maxPages && results.length < maxPlaces) {
       await sleep(PAGINATION_DELAY_MS);
     }

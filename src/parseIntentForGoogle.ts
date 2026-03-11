@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { PlaceType } from "../common/types.js";
-import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "../common/constants.js";
+import type { PlaceType } from "./common/types.js";
+import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "./common/constants.js";
+import { fromApiUsage, type TokenUsage } from "./common/helpers/usage.js";
 
 const client = new Anthropic();
 
@@ -23,6 +24,7 @@ export interface IntentParams {
 export interface ParseIntentResult {
   params: IntentParams;
   reasoning: string;
+  usage: TokenUsage;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +122,9 @@ const SYSTEM_PROMPT = `Ты — помощник для поиска завед�
 // Основная функция
 // ---------------------------------------------------------------------------
 
-export async function parseIntent(prompt: string): Promise<ParseIntentResult> {
+export async function parseIntentForGoogle(
+  prompt: string,
+): Promise<ParseIntentResult> {
   const response = await client.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: PARSE_INTENT_MAX_TOKENS,
@@ -141,5 +145,5 @@ export async function parseIntent(prompt: string): Promise<ParseIntentResult> {
     reasoning: string;
   };
 
-  return { params, reasoning };
+  return { params, reasoning, usage: fromApiUsage(response.usage) };
 }
