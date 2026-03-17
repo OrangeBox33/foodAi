@@ -56,6 +56,7 @@ export async function fetchNearbyPlaces(
   params: GoogleNearbySearchParams,
   apiKey: string,
 ): Promise<GooglePlace[]> {
+  console.log("fetchNearbyPlaces", { location, params });
   const maxPlaces = params.maxPlaces ?? DEFAULT_MAX_PLACES;
   const results: GooglePlace[] = [];
 
@@ -94,6 +95,6 @@ export async function fetchNearbyPlaces(
       await sleep(PAGINATION_DELAY_MS);
     }
   } while (pagetoken && pagesLoaded < maxPages && results.length < maxPlaces);
-
-  return results.slice(0, maxPlaces);
+  console.log("results", results);
+  return results;
 }

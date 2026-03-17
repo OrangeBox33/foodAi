@@ -260,13 +260,11 @@ async function extractPlaceSignals(
 ): Promise<ExtractResult> {
   const reviewsWithText = place.reviews.filter((r) => r.text.trim().length > 0);
 
+  const name = placeData?.name ?? place.title;
+
   if (reviewsWithText.length < MIN_REVIEWS_FOR_EXTRACTION) {
     return {
-      signals: {
-        placeId: place.placeId,
-        name: place.title,
-        insufficientData: true,
-      },
+      signals: { placeId: place.placeId, name, insufficientData: true },
       usage: ZERO_USAGE,
     };
   }
@@ -288,17 +286,14 @@ async function extractPlaceSignals(
   );
   if (!toolUse) {
     return {
-      signals: {
-        placeId: place.placeId,
-        name: place.title,
-        insufficientData: true,
-      },
+      signals: { placeId: place.placeId, name, insufficientData: true },
       usage: fromApiUsage(response.usage),
     };
   }
 
+  // placeId и name берём из реальных данных — Claude может вернуть неверные значения
   return {
-    signals: toolUse.input as PlaceSignals,
+    signals: { ...(toolUse.input as PlaceSignals), placeId: place.placeId, name },
     usage: fromApiUsage(response.usage),
   };
 }
@@ -353,6 +348,14 @@ export async function analyzeReviews(
   placesData: PlaceData[],
   userPrompt: string,
 ): Promise<AnalysisResult> {
+  if (places.length === 0) {
+    return {
+      recommendations: [],
+      summary: "Заведения не найдены.",
+      usage: { extractSignals: ZERO_USAGE, rankPlaces: ZERO_USAGE },
+    };
+  }
+
   const dataMap = new Map(placesData.map((p) => [p.place_id, p]));
 
   // Stage 1: параллельная экстракция сигналов по каждому заведению
@@ -381,10 +384,17 @@ export async function analyzeReviews(
 
   // Stage 2: финальное ранжирование по карточкам
   const {
-    recommendations,
+    recommendations: rawRecs,
     summary,
     usage: rankUsage,
   } = await rankPlaces(signals, userPrompt);
+
+  // Имена берём из signals по placeId — Claude в Stage 2 может вернуть неверное название
+  const nameByPlaceId = new Map(signals.map((s) => [s.placeId, s.name]));
+  const recommendations = rawRecs.map((rec) => ({
+    ...rec,
+    name: nameByPlaceId.get(rec.placeId) ?? rec.name,
+  }));
 
   return {
     recommendations,

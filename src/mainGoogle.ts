@@ -35,12 +35,18 @@ export async function mainGoogle(
     ...input,
   };
 
-  const location = await resolveLocation(mergedInput.url);
+  const location = await resolveLocation(input.url);
 
   const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
   writeFileSync("fetchNearbyPlaces.json", JSON.stringify(rawPlaces, null, 2));
 
   const places = filterPlaces(rawPlaces, { minRating, minReviewCount });
+  const userPrompt = input.userPrompt ?? "";
+
+  if (places.length === 0) {
+    const analysis = await analyzeReviews([], [], userPrompt);
+    return { places: [], placesForAI: [], analysis, apifyCostUsd: 0 };
+  }
 
   const { reviews, apifyCostUsd } = await apifyReviewScraper({
     placeIds: places.map((p) => p.place_id),
@@ -49,8 +55,6 @@ export async function mainGoogle(
   });
 
   const placesForAI = mapFlatReviewsForAI(reviews);
-
-  const userPrompt = input.userPrompt ?? "";
   const analysis = await analyzeReviews(placesForAI, places, userPrompt);
 
   return { places, placesForAI, analysis, apifyCostUsd };
