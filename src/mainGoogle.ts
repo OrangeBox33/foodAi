@@ -1,5 +1,6 @@
+import { writeFileSync } from "fs";
 import { analyzeReviews } from "./analyzeReviews.js";
-import { scrapeReviews } from "./apifyReviewScraper.js";
+import { apifyReviewScraper } from "./apifyReviewScraper.js";
 import {
   DEFAULT_MAX_REVIEWS_PER_PLACE,
   DEFAULT_MIN_RATING,
@@ -11,7 +12,7 @@ import {
 import { filterPlaces } from "./common/helpers/filter.js";
 import { mapFlatReviewsForAI } from "./common/helpers/mapForAI.js";
 import { FindPlacesGoogleInput, FindPlacesResult } from "./common/types.js";
-import { fetchNearbyPlaces } from "./placesSearchGoogle.js";
+import { fetchNearbyPlaces } from "./googlePlacesSearch.js";
 import { resolveLocation } from "./resolveLocation.js";
 
 export async function mainGoogle(
@@ -37,19 +38,14 @@ export async function mainGoogle(
   const location = await resolveLocation(mergedInput.url);
 
   const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
+  writeFileSync("fetchNearbyPlaces.json", JSON.stringify(rawPlaces, null, 2));
 
   const places = filterPlaces(rawPlaces, { minRating, minReviewCount });
 
-  const placeIds = places.map((p) => p.place_id);
-
-  const { reviews, apifyCostUsd } = await scrapeReviews({
-    placeIds,
-    maxReviews: maxReviewsPerPlace,
-    reviewsSort: input.reviewsSort,
-    reviewsOrigin: input.reviewsOrigin,
-    personalData: input.personalData,
-    reviewsStartDate: input.reviewsStartDate,
-    language: input.language,
+  const { reviews, apifyCostUsd } = await apifyReviewScraper({
+    placeIds: places.map((p) => p.place_id),
+    limit: maxReviewsPerPlace,
+    order: input.reviewsSort,
   });
 
   const placesForAI = mapFlatReviewsForAI(reviews);

@@ -170,59 +170,16 @@ export type ReviewsOrigin = "all" | "google";
 
 export interface ApifyScraperInput {
   placeIds: string[];
-  maxReviews: number;
-  reviewsSort?: ReviewsSort;
-  language?: string;
-  reviewsOrigin?: ReviewsOrigin;
-  personalData?: boolean;
-  reviewsStartDate?: string; // "2024-05-03" или "3 months"
+  limit?: number;
+  order?: string; // "newest" | "relevant" | "highest_rating" | "lowest_rating"
 }
 
+// Сырой отзыв из web_wanderer/google-reviews-scraper
 export interface ApifyReview {
-  // Данные о заведении
-  placeId: string;
-  title: string;
-  totalScore: number;
-  reviewsCount: number;
-  categoryName: string;
-  categories: string[];
-  price: string | null;
-  url: string;
-  location: LatLng;
-  address: string | null;
-  city: string | null;
-  countryCode: string | null;
-  imageUrl: string | null;
-
-  // Данные об отзыве
-  reviewId: string;
-  reviewUrl: string | null;
-  reviewOrigin: string;
-  stars: number;
-  rating: number | null;
-  text: string | null;
-  textTranslated: string | null;
-  originalLanguage: string | null;
-  translatedLanguage: string | null;
-  publishAt: string;
-  publishedAtDate: string;
-  likesCount: number;
-  reviewImageUrls: string[];
-  responseFromOwnerDate: string | null;
-  responseFromOwnerText: string | null;
-  visitedIn: string | null;
-  isAdvertisement: boolean;
-
-  // Данные о рецензенте (при personalData: true)
-  reviewerId: string | null;
-  reviewerUrl: string | null;
-  name: string | null;
-  reviewerNumberOfReviews: number | null;
-  isLocalGuide: boolean | null;
-  reviewerPhotoUrl: string | null;
-
-  // Мета
-  searchString: string;
-  scrapedAt: string;
-  language: string;
+  is_local_guide: boolean;
+  source: string;
+  rating: number;
+  content: string;
+  reviewed_at: string; // relative string, e.g. "2 days ago"
+  place_id: string;
 }

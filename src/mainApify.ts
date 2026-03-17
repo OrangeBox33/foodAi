@@ -1,6 +1,6 @@
 import { analyzeReviews } from "./analyzeReviews.js";
 import {
-  fetchNearbyPlacesApify,
+  apifyPlacesScraper,
   filterApifyPlaces,
   mapApifyPlaceToPlaceData,
 } from "./apifyPlacesScraper.js";
@@ -17,8 +17,7 @@ export async function mainApify(
   const minRating = input.minRating ?? DEFAULT_MIN_RATING;
   const minReviewCount = input.minReviewCount ?? DEFAULT_MIN_REVIEW_COUNT;
 
-  const { places: rawPlaces, apifyCostUsd } =
-    await fetchNearbyPlacesApify(input);
+  const { places: rawPlaces, apifyCostUsd } = await apifyPlacesScraper(input);
 
   const filteredRaw = filterApifyPlaces(rawPlaces, {
     minRating,

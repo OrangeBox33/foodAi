@@ -10,6 +10,7 @@ npm run build      # Compile TypeScript to dist/
 ```
 
 Run a specific file directly:
+
 ```bash
 npx tsx src/someFile.ts
 ```
@@ -19,6 +20,7 @@ There is no test suite.
 ## Environment Variables
 
 Requires a `.env` file in the project root:
+
 ```
 GOOGLE_PLACES_API_KEY=...
 APIFY_API_TOKEN=...
@@ -32,11 +34,11 @@ This is a TypeScript Node.js library that finds and recommends nearby food venue
 
 1. **`parseIntentForApify`** (`src/parseIntentForApify.ts`) — converts a free-text user query (in Russian) into structured `ApifyIntentParams` using `claude-haiku-4-5` and the `set_search_params` tool.
 
-2. **`fetchNearbyPlacesApify`** (`src/apifyPlacesScraper.ts`) — calls Apify actor `compass/crawler-google-places` with `{lat, lng, query, maxItems, zoom}`. Returns raw `ApifyPlace[]`.
+2. **`apifyPlacesScraper`** (`src/apifyPlacesScraper.ts`) — calls Apify actor `compass/crawler-google-places` with `{lat, lng, query, maxItems, zoom}`. Returns raw `ApifyPlace[]`.
 
 3. **`filterApifyPlaces`** — filters by `minRating` and `minReviewCount`, maps `ApifyPlace` → `PlaceData`. Price level is parsed from `$`/`$$`/`$$$` strings.
 
-4. **`scrapeReviews`** (`src/apifyReviewScraper.ts`) — calls Apify actor `compass/google-maps-reviews-scraper` with the filtered `place_id` list. Blocking run, can take significant time.
+4. **`apifyReviewScraper`** (`src/apifyReviewScraper.ts`) — calls Apify actor `compass/google-maps-reviews-scraper` with the filtered `place_id` list. Blocking run, can take significant time.
 
 5. **`mapReviewsForAI`** (`src/common/helpers/mapForAI.ts`) — groups flat `ApifyReview[]` by `placeId` into `PlaceForAI[]`, strips ads and reviews without text, prefers `textTranslated` over `text`.
 

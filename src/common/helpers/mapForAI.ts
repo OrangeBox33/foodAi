@@ -20,37 +20,46 @@ function mapEmbeddedReview(review: ApifyPlaceReview): ReviewForAI {
   };
 }
 
-// Legacy mapper for flat ApifyReview[] from compass/google-maps-reviews-scraper
+// Извлекает переведённый текст из content, если есть "(Translated by Google)"
+// Иначе возвращает исходный контент с раскодированными HTML-сущностями
+function extractContent(content: string): string {
+  const match = content.match(/^\(Translated by Google\) ([\s\S]+?)\n\(Original\)/);
+  const text = match ? match[1] : content;
+  return text
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
+    .trim();
+}
+
+// Mapper for flat ApifyReview[] from web_wanderer/google-reviews-scraper
 export function mapFlatReviewsForAI(reviews: ApifyReview[]): PlaceForAI[] {
   const placesMap = new Map<string, PlaceForAI>();
 
   for (const review of reviews) {
-    if (review.isAdvertisement) continue;
-    if (!review.text && !review.textTranslated) continue;
+    if (!review.content) continue;
 
-    let place = placesMap.get(review.placeId);
+    let place = placesMap.get(review.place_id);
     if (!place) {
       place = {
-        placeId: review.placeId,
-        title: review.title,
-        totalScore: review.totalScore,
-        reviewsCount: review.reviewsCount,
-        categoryName: review.categoryName,
-        price: review.price,
+        placeId: review.place_id,
+        title: "",
+        totalScore: 0,
+        reviewsCount: 0,
+        categoryName: "",
+        price: null,
         reviews: [],
       };
-      placesMap.set(review.placeId, place);
+      placesMap.set(review.place_id, place);
     }
 
     place.reviews.push({
-      stars: review.stars,
-      text: review.textTranslated ?? review.text ?? "",
-      publishedAtDate: review.publishedAtDate,
-      visitedIn: review.visitedIn,
-      isLocalGuide: review.isLocalGuide,
-      reviewerNumberOfReviews: review.reviewerNumberOfReviews,
-      likesCount: review.likesCount,
-      responseFromOwnerText: review.responseFromOwnerText,
+      stars: review.rating,
+      text: extractContent(review.content),
+      publishedAtDate: review.reviewed_at,
+      visitedIn: null,
+      isLocalGuide: review.is_local_guide,
+      reviewerNumberOfReviews: null,
+      likesCount: 0,
+      responseFromOwnerText: null,
     });
   }
 

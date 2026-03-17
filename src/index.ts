@@ -2,8 +2,14 @@ import "dotenv/config";
 import { parseIntentForApify } from "./parseIntentForApify.js";
 import { parseIntentForGoogle } from "./parseIntentForGoogle.js";
 import { printUsageReport } from "./common/helpers/usage.js";
+import {
+  extractGoogleMapsUrl,
+  replaceGoogleMapsKeyword,
+} from "./common/helpers/urlMatch.js";
+import type { ApifyIntentParams } from "./parseIntentForApify.js";
 import { mainApify } from "./mainApify.js";
 import { mainGoogle } from "./mainGoogle.js";
+import { FindPlacesGoogleInput } from "./common/types.js";
 
 export type {
   FindPlacesApifyInput,
@@ -29,75 +35,49 @@ const isMain =
 if (isMain) {
   const useApify = process.env.USE_APIFY === "1";
 
-  if (useApify) {
-    const userPrompt =
-      'тестовый запуск url="https://www.google.com/maps/search/cafe/@11.9480696,108.4301579,15z" поиск по 3 заведениям, по 15 отзывов в каждом.';
-    console.log(`[Apify] Запрос: "${userPrompt}"\n`);
+  const userPrompt =
+    "Хочу посидеть с друзьями и поесть хорошей вьетнамской или азиатской кухни. Блюда из риса желательно. Приятное ламповое место. цены средние или даже выше https://www.google.com/maps/search/food/@11.9465629,108.4321534,15z поиск по 10 заведениям, по 10 отзывов в каждом.";
 
-    const {
-      params,
-      reasoning,
-      usage: parseUsage,
-    } = await parseIntentForApify(userPrompt);
-    console.log("Параметры от Claude:", params);
-    console.log("Reasoning:", reasoning, "\n");
+  console.log(`[${useApify ? "Apify" : "Google"}] Запрос: "${userPrompt}"\n`);
 
-    const result = await mainApify({ userPrompt, ...params });
+  const baseUrl = extractGoogleMapsUrl(userPrompt);
 
-    console.log(`Найдено заведений: ${result.places.length}`);
-    console.log("\n=== РЕКОМЕНДАЦИИ ===");
-    console.log(result.analysis.summary);
-    console.log();
-    for (const rec of result.analysis.recommendations) {
-      console.log(
-        `#${result.analysis.recommendations.indexOf(rec) + 1} ${rec.name}`,
-      );
-      console.log(`   ${rec.whyItFits}`);
-      console.log(`   → ${rec.verdict}\n`);
-    }
+  const {
+    params,
+    reasoning,
+    usage: parseUsage,
+  } = useApify
+    ? await parseIntentForApify(userPrompt)
+    : await parseIntentForGoogle(userPrompt);
 
-    printUsageReport(
-      parseUsage,
-      result.analysis.usage.extractSignals,
-      result.analysis.usage.rankPlaces,
-      result.placesForAI.length,
-      result.apifyCostUsd,
+  console.log("Параметры от Claude:", params);
+  console.log("Reasoning:", reasoning, "\n");
+
+  const url = useApify
+    ? replaceGoogleMapsKeyword(baseUrl, (params as ApifyIntentParams).keyword)
+    : baseUrl;
+
+  const result = useApify
+    ? await mainApify({ url, userPrompt, ...params })
+    : await mainGoogle({ url, userPrompt, ...params } as FindPlacesGoogleInput);
+
+  console.log(`Найдено заведений: ${result.places.length}`);
+  console.log("\n=== РЕКОМЕНДАЦИИ ===");
+  console.log(result.analysis.summary);
+  console.log();
+  for (const rec of result.analysis.recommendations) {
+    console.log(
+      `#${result.analysis.recommendations.indexOf(rec) + 1} ${rec.name}`,
     );
-  } else {
-    const url =
-      "https://www.google.com/maps/search/cafe/@11.9480696,108.4301579,15z";
-    const userPrompt =
-      "тестовый запуск поиск по 3 заведениям, по 15 отзывов в каждом.";
-    console.log(`[Google] Запрос: "${userPrompt}"\n`);
-
-    const {
-      params,
-      reasoning,
-      usage: parseUsage,
-    } = await parseIntentForGoogle(userPrompt);
-    console.log("Параметры от Claude:", params);
-    console.log("Reasoning:", reasoning, "\n");
-
-    const result = await mainGoogle({ url, userPrompt, ...params });
-
-    console.log(`Найдено заведений: ${result.places.length}`);
-    console.log("\n=== РЕКОМЕНДАЦИИ ===");
-    console.log(result.analysis.summary);
-    console.log();
-    for (const rec of result.analysis.recommendations) {
-      console.log(
-        `#${result.analysis.recommendations.indexOf(rec) + 1} ${rec.name}`,
-      );
-      console.log(`   ${rec.whyItFits}`);
-      console.log(`   → ${rec.verdict}\n`);
-    }
-
-    printUsageReport(
-      parseUsage,
-      result.analysis.usage.extractSignals,
-      result.analysis.usage.rankPlaces,
-      result.placesForAI.length,
-      result.apifyCostUsd,
-    );
+    console.log(`   ${rec.whyItFits}`);
+    console.log(`   → ${rec.verdict}\n`);
   }
+
+  printUsageReport(
+    parseUsage,
+    result.analysis.usage.extractSignals,
+    result.analysis.usage.rankPlaces,
+    result.placesForAI.length,
+    result.apifyCostUsd,
+  );
 }

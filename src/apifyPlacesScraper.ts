@@ -17,7 +17,7 @@ export function extractPlaceId(url: string): string {
   return match ? decodeURIComponent(match[1]) : url;
 }
 
-export async function fetchNearbyPlacesApify(
+export async function apifyPlacesScraper(
   input: FindPlacesApifyInput,
 ): Promise<{ places: ApifyPlace[]; apifyCostUsd: number }> {
   const token = process.env.APIFY_API_TOKEN;
@@ -35,7 +35,7 @@ export async function fetchNearbyPlacesApify(
     reviewsSort: input.reviewsSort ?? "newest",
     reviewsOrigin: input.reviewsOrigin ?? "all",
     skipClosedPlaces: true,
-    scrapeReviewsPersonalData: input.personalData ?? false,
+    apifyReviewScraperPersonalData: input.personalData ?? false,
     maxImages: 0,
     maxQuestions: 0,
   };

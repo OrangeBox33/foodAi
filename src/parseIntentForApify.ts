@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { FindPlacesApifyInput } from "./common/types.js";
 import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "./common/constants.js";
 import { fromApiUsage, type TokenUsage } from "./common/helpers/usage.js";
 
@@ -9,10 +8,13 @@ const client = new Anthropic();
 // Публичные типы
 // ---------------------------------------------------------------------------
 
-export type ApifyIntentParams = Pick<
-  FindPlacesApifyInput,
-  "url" | "maxPlaces" | "maxReviewsPerPlace" | "minRating" | "minReviewCount"
->;
+export interface ApifyIntentParams {
+  keyword: string;
+  maxPlaces?: number;
+  maxReviewsPerPlace?: number;
+  minRating?: number;
+  minReviewCount?: number;
+}
 
 export interface ParseIntentResult {
   params: ApifyIntentParams;
@@ -31,13 +33,11 @@ const TOOL: Anthropic.Tool = {
   input_schema: {
     type: "object",
     properties: {
-      url: {
+      keyword: {
         type: "string",
         description:
-          "Google Maps search URL вида 'https://www.google.com/maps/search/KEYWORD/@lat,lng,zoom'. " +
-          'Координаты и zoom извлекай точно из URL пользователя (формат url="..."), не меняй их. ' +
-          "KEYWORD замени на подходящий поисковый запрос на английском, исходя из намерения пользователя " +
-          "(например: restaurant, cafe, pizza, sushi, bar, bakery, street+food и т.п.). ",
+          "Поисковый запрос на английском для Google Maps (например: restaurant, cafe, pizza, sushi, bar, bakery, street+food). " +
+          "Выбирай исходя из намерения пользователя.",
       },
       maxPlaces: {
         type: "number",
@@ -71,15 +71,14 @@ const TOOL: Anthropic.Tool = {
           "Краткое объяснение выбранных параметров (2–4 предложения).",
       },
     },
-    required: ["url", "reasoning"],
+    required: ["keyword", "reasoning"],
   },
 };
 
-const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания через Google Maps. Пользователь описывает, что ищет, и передаёт Google Maps URL. Ты составляешь параметры для Apify Google Places scraper.
+const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания через Google Maps. Пользователь описывает, что ищет. Ты выбираешь keyword для поиска и параметры для Apify Google Places scraper.
 
 Принципы:
-- Координаты и zoom из URL не меняй.
-- Keyword в URL замени на подходящий английский запрос по намерению пользователя (restaurant, cafe, sushi, pizza, bar и т.п.). Если намерение неясно — оставь keyword из оригинального URL.
+- Keyword должен быть конкретным английским запросом по намерению пользователя (restaurant, cafe, sushi, pizza, bar и т.п.).
 - Не указывай параметры без необходимости — лишние ограничения ухудшают результат.
 - Для особых случаев (романтический ужин, деловая встреча) повышай minRating до 4.5.`;
 
