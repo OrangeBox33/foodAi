@@ -13,7 +13,7 @@ import { filterPlaces } from "./common/helpers/filter.js";
 import { mapFlatReviewsForAI } from "./common/helpers/mapForAI.js";
 import { FindPlacesGoogleInput, FindPlacesResult } from "./common/types.js";
 import { fetchNearbyPlaces } from "./googlePlacesSearch.js";
-import { resolveLocation } from "./resolveLocation.js";
+import { getLatLngFromGoogleMapsUrl } from "./resolveLocation.js";
 
 export async function mainGoogle(
   input: FindPlacesGoogleInput,
@@ -35,7 +35,7 @@ export async function mainGoogle(
     ...input,
   };
 
-  const location = await resolveLocation(input.url);
+  const location = await getLatLngFromGoogleMapsUrl(input.url);
 
   const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
   writeFileSync("fetchNearbyPlaces.json", JSON.stringify(rawPlaces, null, 2));

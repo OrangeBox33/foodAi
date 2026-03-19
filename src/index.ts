@@ -36,7 +36,7 @@ if (isMain) {
   const useApify = process.env.USE_APIFY === "1";
 
   const userPrompt =
-    "Хочу поесть ВКУСНОЙ вьетнамской или азиатской еды. Быстрая еда. Блюда из риса желательно. https://www.google.com/maps/@16.0150372,108.2066113,18.33z поиск по 5 заведениям, по 5 отзывов в каждом. радиус 300м. keyword оставь пустым. type=restaurant. minRating=1";
+    "Хочу поесть ВКУСНОЙ вьетнамской или азиатской еды. Быстрая еда. Блюда из риса желательно. https://maps.app.goo.gl/GAXdoPfQB6yXbHKD6 поиск по 5 заведениям, по 1 отзывов в каждом. радиус 300м. keyword оставь пустым. type=restaurant. minRating=1";
 
   console.log(`[${useApify ? "Apify" : "Google"}] Запрос: "${userPrompt}"\n`);
 
