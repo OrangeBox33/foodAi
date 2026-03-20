@@ -15,7 +15,7 @@ const isMain =
 
 if (isMain) {
   const userPrompt =
-    "Хочу поесть ВКУСНОЙ вьетнамской или азиатской еды. Быстрая еда. Блюда из риса желательно. https://maps.app.goo.gl/oh1uKVZkrqcsGvsx9 поиск по 5 заведениям, по 1 отзывов в каждом. радиус 300м. type=restaurant";
+    "Хочу поесть вьетнамской или азиатской еды. Быстрая еда. Блюда из риса желательно. https://maps.app.goo.gl/oh1uKVZkrqcsGvsx9 поиск по 10 заведениям, по 10 отзывов в каждом. радиус 300м. type=restaurant";
 
   console.log(`Запрос: "${userPrompt}"\n`);
 

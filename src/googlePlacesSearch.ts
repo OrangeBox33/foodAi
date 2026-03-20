@@ -5,6 +5,7 @@ import type {
   PlaceType,
 } from "./common/types.js";
 import {
+  DEFAULT_MIN_RATING,
   DEFAULT_SEARCH_RADIUS,
   PAGINATION_DELAY_MS,
 } from "./common/constants.js";
@@ -16,8 +17,6 @@ export interface GoogleNearbySearchParams {
   type: PlaceType;
   radius?: number;
   opennow?: boolean;
-  minprice?: number;
-  maxprice?: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -68,13 +67,10 @@ export async function fetchNearbyPlaces(
     radius: String(params.radius ?? DEFAULT_SEARCH_RADIUS),
     type: params.type,
     rankby: "prominence",
+    minRating: DEFAULT_MIN_RATING,
   };
 
   if (params.opennow) baseParams.opennow = "true";
-  if (params.minprice !== undefined)
-    baseParams.minprice = String(params.minprice);
-  if (params.maxprice !== undefined)
-    baseParams.maxprice = String(params.maxprice);
 
   let pagetoken: string | undefined;
   let pagesLoaded = 0;
@@ -87,6 +83,7 @@ export async function fetchNearbyPlaces(
     }
 
     const data = await fetchPage(urlParams);
+    console.log("urlParams", urlParams);
     results.push(...data.results);
     pagetoken = data.next_page_token;
     pagesLoaded++;

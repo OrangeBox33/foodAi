@@ -1,12 +1,15 @@
 import { ApifyClient } from "apify-client";
 import type { ApifyScraperInput, ApifyReview } from "./common/types.js";
-import { DEFAULT_MAX_REVIEWS_PER_PLACE, DEFAULT_REVIEWS_SORT } from "./common/constants.js";
+import {
+  DEFAULT_MAX_REVIEWS_PER_PLACE,
+  DEFAULT_REVIEWS_SORT,
+} from "./common/constants.js";
 
 const ACTOR_ID = "web_wanderer/google-reviews-scraper";
 
-function twoMonthsAgo(): string {
+function threeMonthsAgo(): string {
   const d = new Date();
-  d.setMonth(d.getMonth() - 2);
+  d.setMonth(d.getMonth() - 3);
   return d.toISOString().split("T")[0];
 }
 
@@ -23,9 +26,10 @@ export async function apifyReviewScraper(
   const actorInput = {
     place_ids: input.placeIds,
     limit: input.limit ?? DEFAULT_MAX_REVIEWS_PER_PLACE,
-    order: input.order ?? DEFAULT_REVIEWS_SORT,
-    anyDate: twoMonthsAgo(),
+    order: DEFAULT_REVIEWS_SORT,
+    anyDate: threeMonthsAgo(),
     include_personal: false,
+    search_limit: 2000,
   };
 
   const run = await client.actor(ACTOR_ID).call(actorInput);

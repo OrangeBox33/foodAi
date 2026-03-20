@@ -1,7 +1,7 @@
+import { MIN_REVIEW_COUNT } from "../constants.js";
 import type { GooglePlace, PlaceData } from "../types.js";
 
 interface FilterOptions {
-  minRating: number;
   minReviewCount?: number;
 }
 
@@ -26,8 +26,10 @@ export function filterPlaces(
 ): PlaceData[] {
   return rawPlaces
     .filter((place) => {
-      if ((place.rating ?? 0) < options.minRating) return false;
-      if (options.minReviewCount !== undefined && (place.user_ratings_total ?? 0) < options.minReviewCount)
+      if (
+        (place.user_ratings_total ?? 0) <
+        (options.minReviewCount || MIN_REVIEW_COUNT)
+      )
         return false;
       return true;
     })

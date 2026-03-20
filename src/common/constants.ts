@@ -5,7 +5,9 @@ export const DEFAULT_MAX_PLACES_FOR_REVIEWS = 30;
 export const DEFAULT_MAX_REVIEWS_PER_PLACE = 20;
 
 // Минимальный рейтинг заведения для включения в выдачу (нежёсткий — основной отбор по взвешенной оценке)
-export const DEFAULT_MIN_RATING = 1;
+export const DEFAULT_MIN_RATING = "4.0";
+
+export const MIN_REVIEW_COUNT = 3;
 
 // ---------------------------------------------------------------------------
 // Apify Places scraper (compass/crawler-google-places)

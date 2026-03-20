@@ -15,15 +15,12 @@ export interface FindPlacesGoogleInput {
   // Google Places Nearby Search
   radius?: number;
   opennow?: boolean;
-  minprice?: 0 | 1 | 2 | 3 | 4;
-  maxprice?: 0 | 1 | 2 | 3 | 4;
 
   // Лимиты
   maxForReviews?: number;
   maxReviewsPerPlace?: number;
 
   // Фильтры
-  minRating?: number;
   minReviewCount?: number;
 
   // Параметры Apify reviews scraper
@@ -113,7 +110,6 @@ export type ReviewsOrigin = "all" | "google";
 export interface ApifyScraperInput {
   placeIds: string[];
   limit?: number;
-  order?: string; // "newest" | "relevant" | "highest_rating" | "lowest_rating"
 }
 
 // Сырой отзыв из web_wanderer/google-reviews-scraper

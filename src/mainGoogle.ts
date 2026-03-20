@@ -23,7 +23,6 @@ export async function mainGoogle(
 
   const maxReviewsPerPlace =
     input.maxReviewsPerPlace ?? DEFAULT_MAX_REVIEWS_PER_PLACE;
-  const minRating = input.minRating ?? DEFAULT_MIN_RATING;
   const maxForReviews = input.maxForReviews ?? DEFAULT_MAX_PLACES_FOR_REVIEWS;
 
   const mergedInput: FindPlacesGoogleInput = {
@@ -35,24 +34,26 @@ export async function mainGoogle(
 
   const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
   writeFileSync(
-    "fetchNearbyPlacesInput.json",
+    "./debug/fetchNearbyPlacesInput.json",
     JSON.stringify({ location, mergedInput }, null, 2),
   );
-  writeFileSync("fetchNearbyPlaces.json", JSON.stringify(rawPlaces, null, 2));
+  writeFileSync(
+    "./debug/fetchNearbyPlaces.json",
+    JSON.stringify(rawPlaces, null, 2),
+  );
 
   console.log(`[Поиск] Получено заведений от Google: ${rawPlaces.length}`);
 
   const filtered = filterPlaces(rawPlaces, {
-    minRating,
     minReviewCount: input.minReviewCount,
   });
   writeFileSync(
-    "fetchNearbyPlacesFiltered.json",
+    "./debug/fetchNearbyPlacesFiltered.json",
     JSON.stringify(filtered, null, 2),
   );
   const places = selectTopPlaces(filtered, maxForReviews);
   writeFileSync(
-    "fetchNearbyPlacesTop.json",
+    "./debug/fetchNearbyPlacesTop.json",
     JSON.stringify({ maxForReviews, filtered }, null, 2),
   );
 
@@ -74,10 +75,13 @@ export async function mainGoogle(
   const { reviews, apifyCostUsd } = await apifyReviewScraper({
     placeIds: places.map((p) => p.place_id),
     limit: maxReviewsPerPlace,
-    order: input.reviewsSort,
   });
 
   const placesForAI = mapFlatReviewsForAI(reviews);
+  writeFileSync(
+    "./debug/debug_placesForAI.json",
+    JSON.stringify(placesForAI, null, 2),
+  );
   const analysis = await analyzeReviews(placesForAI, places, userPrompt);
 
   return { places, placesForAI, analysis, apifyCostUsd };

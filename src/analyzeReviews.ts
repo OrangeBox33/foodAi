@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { writeFileSync } from "fs";
 import type { PlaceForAI, PlaceData } from "./common/types.js";
 import {
   CLAUDE_MODEL,
@@ -293,7 +294,11 @@ async function extractPlaceSignals(
 
   // placeId и name берём из реальных данных — Claude может вернуть неверные значения
   return {
-    signals: { ...(toolUse.input as PlaceSignals), placeId: place.placeId, name },
+    signals: {
+      ...(toolUse.input as PlaceSignals),
+      placeId: place.placeId,
+      name,
+    },
     usage: fromApiUsage(response.usage),
   };
 }
@@ -382,6 +387,8 @@ export async function analyzeReviews(
     }
   });
 
+  writeFileSync("./debug/debug_signals.json", JSON.stringify(signals, null, 2));
+
   // Stage 2: финальное ранжирование по карточкам
   const {
     recommendations: rawRecs,
@@ -395,6 +402,11 @@ export async function analyzeReviews(
     ...rec,
     name: nameByPlaceId.get(rec.placeId) ?? rec.name,
   }));
+
+  writeFileSync(
+    "./debug/debug_analysis.json",
+    JSON.stringify({ recommendations, summary }, null, 2),
+  );
 
   return {
     recommendations,
