@@ -1,14 +1,14 @@
-/** Максимальное число заведений, возвращаемых из поиска */
-export const DEFAULT_MAX_PLACES = 30;
+/** Максимальное число заведений на этапе поиска */
+export const DEFAULT_MAX_PLACES = 100;
+
+/** Число заведений, по которым скрапим отзывы (выбираются из найденных) */
+export const DEFAULT_MAX_PLACES_FOR_REVIEWS = 30;
 
 /** Число отзывов на заведение, передаваемых в Apify reviews scraper */
 export const DEFAULT_MAX_REVIEWS_PER_PLACE = 20;
 
-// Минимальный рейтинг заведения для включения в выдачу
-export const DEFAULT_MIN_RATING = 4.2;
-
-// Минимальное число отзывов для включения в выдачу
-export const DEFAULT_MIN_REVIEW_COUNT = 25;
+// Минимальный рейтинг заведения для включения в выдачу (нежёсткий — основной отбор по взвешенной оценке)
+export const DEFAULT_MIN_RATING = 1;
 
 // ---------------------------------------------------------------------------
 // Apify Places scraper (compass/crawler-google-places)
@@ -44,7 +44,7 @@ export const ANALYZE_MAX_TOKENS = 4096;
 export const DEFAULT_SEARCH_RADIUS = 500;
 
 /** Показывать только открытые прямо сейчас */
-export const DEFAULT_OPENNOW = true;
+export const DEFAULT_OPENNOW = false;
 
 /** Минимальный ценовой уровень (0 = бесплатно) */
 export const DEFAULT_MIN_PRICE = 0;

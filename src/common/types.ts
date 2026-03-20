@@ -22,6 +22,7 @@ export interface FindPlacesGoogleInput {
 
   // Лимиты
   maxPlaces?: number;
+  maxForReviews?: number;
   maxReviewsPerPlace?: number;
 
   // Фильтры
@@ -111,8 +112,9 @@ export interface FindPlacesApifyInput {
   url: string;
 
   userPrompt?: string;
-  maxReviewsPerPlace?: number;
   maxPlaces?: number;
+  maxForReviews?: number;
+  maxReviewsPerPlace?: number;
 
   // Фильтры
   minRating?: number;

@@ -4,12 +4,10 @@ import { apifyReviewScraper } from "./apifyReviewScraper.js";
 import {
   DEFAULT_MAX_REVIEWS_PER_PLACE,
   DEFAULT_MIN_RATING,
-  DEFAULT_MIN_REVIEW_COUNT,
+  DEFAULT_MAX_PLACES_FOR_REVIEWS,
   DEFAULT_OPENNOW,
-  DEFAULT_MIN_PRICE,
-  DEFAULT_MAX_PRICE,
 } from "./common/constants.js";
-import { filterPlaces } from "./common/helpers/filter.js";
+import { filterPlaces, selectTopPlaces } from "./common/helpers/filter.js";
 import { mapFlatReviewsForAI } from "./common/helpers/mapForAI.js";
 import { FindPlacesGoogleInput, FindPlacesResult } from "./common/types.js";
 import { fetchNearbyPlaces } from "./googlePlacesSearch.js";
@@ -26,21 +24,47 @@ export async function mainGoogle(
   const maxReviewsPerPlace =
     input.maxReviewsPerPlace ?? DEFAULT_MAX_REVIEWS_PER_PLACE;
   const minRating = input.minRating ?? DEFAULT_MIN_RATING;
-  const minReviewCount = input.minReviewCount ?? DEFAULT_MIN_REVIEW_COUNT;
+  const maxForReviews = input.maxForReviews ?? DEFAULT_MAX_PLACES_FOR_REVIEWS;
 
   const mergedInput: FindPlacesGoogleInput = {
     opennow: DEFAULT_OPENNOW,
-    minprice: DEFAULT_MIN_PRICE,
-    maxprice: DEFAULT_MAX_PRICE,
     ...input,
   };
 
   const location = await getLatLngFromGoogleMapsUrl(input.url);
 
   const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
+  writeFileSync(
+    "fetchNearbyPlacesInput.json",
+    JSON.stringify({ location, mergedInput }, null, 2),
+  );
   writeFileSync("fetchNearbyPlaces.json", JSON.stringify(rawPlaces, null, 2));
 
-  const places = filterPlaces(rawPlaces, { minRating, minReviewCount });
+  console.log(`[Поиск] Получено заведений от Google: ${rawPlaces.length}`);
+
+  const filtered = filterPlaces(rawPlaces, {
+    minRating,
+    minReviewCount: input.minReviewCount,
+    keyword: input.keyword,
+  });
+  writeFileSync(
+    "fetchNearbyPlacesFiltered.json",
+    JSON.stringify(filtered, null, 2),
+  );
+  const places = selectTopPlaces(filtered, maxForReviews);
+  writeFileSync(
+    "fetchNearbyPlacesTop.json",
+    JSON.stringify({ maxForReviews, filtered }, null, 2),
+  );
+
+  console.log(`[Отбор] Выбрано для скрапинга отзывов: ${places.length}`);
+  places.forEach((p, i) => {
+    const score = (p.rating * Math.log(p.user_ratings_total + 1)).toFixed(2);
+    console.log(
+      `  ${i + 1}. ${p.name} — рейтинг: ${p.rating}, отзывов: ${p.user_ratings_total}, score: ${score}`,
+    );
+  });
+
   const userPrompt = input.userPrompt ?? "";
 
   if (places.length === 0) {

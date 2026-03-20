@@ -24,13 +24,23 @@ Requires a `.env` file in the project root:
 ```
 GOOGLE_PLACES_API_KEY=...
 APIFY_API_TOKEN=...
+USE_APIFY=true   # optional; omit or set to false to use the Google path (default)
 ```
 
 ## Architecture
 
-This is a TypeScript Node.js library that finds and recommends nearby food venues. There are two pipelines; the primary one uses Apify for both place discovery and review scraping.
+This is a TypeScript Node.js library that finds and recommends nearby food venues. There are two pipelines, controlled by the `USE_APIFY` flag in `.env`:
 
-### Primary pipeline: `findPlacesApify` (`src/index.ts`)
+- **Google path** (`src/google/`) — **PRIMARY and DEFAULT**. Apply all changes here unless explicitly asked to touch the Apify path.
+- **Apify path** (`src/index.ts`) — secondary pipeline using Apify actors.
+
+When `USE_APIFY=true` in `.env`, the Apify pipeline runs; otherwise the Google pipeline runs.
+
+### Google path (PRIMARY): `findPlaces` (`src/google/`)
+
+Uses a Google Maps short URL instead of coordinates. `resolveLocation` follows redirects and extracts `{lat, lng}`, then calls Google Places Nearby Search API (paginated, 2s delay between pages), and shares the same review scraping and AI analysis steps. Requires `GOOGLE_PLACES_API_KEY`.
+
+### Apify path (SECONDARY): `findPlacesApify` (`src/index.ts`)
 
 1. **`parseIntentForApify`** (`src/parseIntentForApify.ts`) — converts a free-text user query (in Russian) into structured `ApifyIntentParams` using `claude-haiku-4-5` and the `set_search_params` tool.
 
@@ -45,14 +55,6 @@ This is a TypeScript Node.js library that finds and recommends nearby food venue
 6. **`analyzeReviews`** (`src/analyzeReviews.ts`) — two-stage AI pipeline:
    - **Stage 1** (`extractPlaceSignals`): parallel calls to `claude-haiku-4-5` per place, using tool `extract_place_signals` to produce a `PlaceSignals` card (matchScore, confirmedSignals, redFlags, freshnessTrend, bestEvidence). Places with fewer than 3 text reviews are skipped (`insufficientData: true`). Failed calls don't abort the pipeline.
    - **Stage 2** (`rankPlaces`): single call to `claude-haiku-4-5` with all signal cards, using tool `give_recommendations`. Returns top-3 `PlaceRecommendation[]` and a `summary`.
-
-### Legacy pipeline: `findPlaces` (`src/google/`)
-
-Uses a Google Maps short URL instead of coordinates. `resolveLocation` follows redirects and extracts `{lat, lng}`, then calls Google Places Nearby Search API (paginated, 2s delay between pages), and shares the same review scraping and AI analysis steps. Requires `GOOGLE_PLACES_API_KEY`.
-
-### AI Integration
-
-All AI calls use `@anthropic-ai/sdk` with forced tool use (`tool_choice: { type: "tool", name: "..." }`). The `parseIntent` in `src/google/parseIntent.ts` is the legacy variant for the Google Places pipeline; `parseIntentForApify` in `src/parseIntentForApify.ts` is used by the primary pipeline.
 
 ### Module System
 

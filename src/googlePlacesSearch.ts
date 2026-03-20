@@ -31,7 +31,10 @@ function sleep(ms: number): Promise<void> {
 async function fetchPage(
   params: URLSearchParams,
 ): Promise<GooglePlacesResponse> {
+  const urlParams = new URLSearchParams(params);
+  urlParams.delete("key"); // не логируем ключ
   const url = `${NEARBY_SEARCH_URL}?${params.toString()}`;
+  console.log("[Google API] →", `${NEARBY_SEARCH_URL}?${urlParams.toString()}`);
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -42,7 +45,11 @@ async function fetchPage(
 
   const data = (await response.json()) as GooglePlacesResponse;
 
-  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+  if (data.status === "ZERO_RESULTS") {
+    console.log(
+      "[Google API] ZERO_RESULTS — нет заведений по заданным параметрам",
+    );
+  } else if (data.status !== "OK") {
     throw new Error(
       `Google Places API error: ${data.status}${data.error_message ? ` — ${data.error_message}` : ""}`,
     );
@@ -68,7 +75,8 @@ export async function fetchNearbyPlaces(
     rankby: "prominence",
   };
 
-  if (params.keyword) baseParams.keyword = params.keyword;
+  // keyword намеренно НЕ передаётся в Google API — без него возвращается максимум
+  // заведений (до 60). Фильтрация по keyword выполняется на клиенте в filterPlaces.
   if (params.opennow) baseParams.opennow = "true";
   if (params.minprice !== undefined)
     baseParams.minprice = String(params.minprice);
@@ -95,6 +103,6 @@ export async function fetchNearbyPlaces(
       await sleep(PAGINATION_DELAY_MS);
     }
   } while (pagetoken && pagesLoaded < maxPages && results.length < maxPlaces);
-  console.log("results", results);
+
   return results;
 }
