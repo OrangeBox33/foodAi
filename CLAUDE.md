@@ -36,9 +36,9 @@ This is a TypeScript Node.js library that finds and recommends nearby food venue
 
 2. **`getLatLngFromGoogleMapsUrl`** (`src/resolveLocation.ts`) — takes a Google Maps short URL, follows redirects, and extracts `{lat, lng}`.
 
-3. **`fetchNearbyPlaces`** (`src/googlePlacesSearch.ts`) — calls Google Places Nearby Search API (paginated, 3 pages × 20 = max 60 results, 2s delay between pages). Returns raw `GooglePlace[]`. Requires `GOOGLE_PLACES_API_KEY`. `maxPlaces` is hardcoded to 60 and not configurable.
+3. **`fetchNearbyPlaces`** (`src/googlePlacesSearch.ts`) — calls Google Places Nearby Search API (paginated, 3 pages × 20 = max 60 results, 2s delay between pages). Returns raw `GooglePlace[]`. Requires `GOOGLE_PLACES_API_KEY`. `maxPlaces` is hardcoded to 60 and not configurable. `minRating` is hardcoded to `DEFAULT_MIN_RATING` (4.0).
 
-4. **`filterPlaces` / `selectTopPlaces`** (`src/common/helpers/filter.ts`) — filters by and `minReviewCount`, then selects top N places by score.
+4. **`filterPlaces` / `selectTopPlaces`** (`src/common/helpers/filter.ts`) — filters by `minReviewCount`, then selects top N places by score.
 
 5. **`apifyReviewScraper`** (`src/apifyReviewScraper.ts`) — calls Apify actor `web_wanderer/google-reviews-scraper` with the filtered `place_id` list. Returns `ApifyReview[]`. Requires `APIFY_API_TOKEN`. `include_personal` is hardcoded to `false`.
 
@@ -56,13 +56,13 @@ This is a TypeScript Node.js library that finds and recommends nearby food venue
 
 ### Supporting modules
 
-- `src/common/constants.ts` — all defaults (`DEFAULT_MAX_PLACES_FOR_REVIEWS`, `DEFAULT_MIN_RATING`, `CLAUDE_MODEL`, token limits, etc.). Change defaults here, not at call sites.
+- `src/common/constants.ts` — all defaults (`DEFAULT_MAX_PLACES_FOR_REVIEWS`, `DEFAULT_MIN_RATING` (4.0, hardcoded into Google Places query), `CLAUDE_MODEL`, token limits, etc.). Change defaults here, not at call sites.
 - `src/common/helpers/usage.ts` — token tracking (`TokenUsage`) and cost calculation (`calcCost`) for `claude-haiku-4-5` pricing. The CLI prints a full cost report after each run.
 - `src/common/helpers/filter.ts` — `filterPlaces` and `selectTopPlaces` logic.
 
 ### Key Types (`src/common/types.ts`)
 
-- `FindPlacesGoogleInput` — main input to `mainGoogle()`. Key fields: `url`, `type`, `radius`, `opennow`, `maxForReviews`, `maxReviewsPerPlace`, `minReviewCount`, `reviewsSort`, `reviewsStartDate`. No `keyword`, `language`, `maxPlaces`, or `personalData` — these are either removed or hardcoded.
+- `FindPlacesGoogleInput` — main input to `mainGoogle()`. Key fields: `url`, `type`, `radius`, `opennow`, `maxForReviews`, `maxReviewsPerPlace`, `minReviewCount`, `reviewsSort`, `reviewsStartDate`. No `keyword`, `language`, `maxPlaces`, `minRating`, `minPrice`, `maxPrice`, or `personalData` — these are either removed or hardcoded.
 - `PlaceData` — normalized Google Places result
 - `PlaceForAI` / `ReviewForAI` — trimmed structures passed to Claude
 - `ApifyReview` — raw Apify actor output shape
