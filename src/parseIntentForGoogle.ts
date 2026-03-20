@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { PlaceType } from "./common/types.js";
 import { CLAUDE_MODEL, PARSE_INTENT_MAX_TOKENS } from "./common/constants.js";
 import { fromApiUsage, type TokenUsage } from "./common/helpers/usage.js";
 
@@ -10,7 +9,8 @@ const client = new Anthropic();
 // ---------------------------------------------------------------------------
 
 export interface IntentParams {
-  type: PlaceType;
+  textQuery: string;
+  includedType?: string;
   radius?: number;
   minReviewCount?: number;
   maxReviewsPerPlace?: number;
@@ -33,7 +33,14 @@ const TOOL: Anthropic.Tool = {
   input_schema: {
     type: "object",
     properties: {
-      type: {
+      textQuery: {
+        type: "string",
+        description:
+          "Текстовый поисковый запрос для Google Places Text Search. " +
+          "Составь КРАТКИЙ запрос на английском языке, отражающий суть того, что ищет пользователь. " +
+          'Примеры: "pho", "rice restaurant", "bar".',
+      },
+      includedType: {
         type: "string",
         enum: [
           "restaurant",
@@ -43,12 +50,13 @@ const TOOL: Anthropic.Tool = {
           "meal_takeaway",
           "meal_delivery",
         ],
-        description: "Тип заведения",
+        description:
+          "Тип заведения для фильтрации результатов. Указывай только если пользователь ЯВНО упоминает тип. Если сомневаешься - оставь пустым",
       },
       radius: {
         type: "number",
         description:
-          "Радиус поиска в метрах. Не указывай если пользователь не уточнял. ",
+          "Радиус поиска в метрах. Не указывай если пользователь не уточнял.",
       },
       minReviewCount: {
         type: "number",
@@ -67,13 +75,15 @@ const TOOL: Anthropic.Tool = {
           "Краткое объяснение выбранных параметров (1-2 предложения).",
       },
     },
-    required: ["type", "reasoning"],
+    required: ["textQuery", "reasoning"],
   },
 };
 
 const SYSTEM_PROMPT = `Ты — помощник для поиска заведений общественного питания. Пользователь описывает, что ищет, а ты переводишь это в параметры поиска по Google Maps.
 
 Принципы:
+- textQuery — это главный параметр. Составь короткий, точный запрос, описывающий то, что ищет пользователь. 1-2 слова! 
+- includedType — указывай только если из запроса явно следует конкретный тип заведения (ресторан, кафе, бар и т.д.). Если сомневаешься - оставь пустым. 
 - Устанавливай только те параметры, которые явно следуют из запроса. Лишние параметры ухудшают результат.`;
 
 // ---------------------------------------------------------------------------

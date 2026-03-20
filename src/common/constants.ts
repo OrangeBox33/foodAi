@@ -4,8 +4,8 @@ export const DEFAULT_MAX_PLACES_FOR_REVIEWS = 30;
 /** Число отзывов на заведение, передаваемых в Apify reviews scraper */
 export const DEFAULT_MAX_REVIEWS_PER_PLACE = 20;
 
-// Минимальный рейтинг заведения для включения в выдачу (нежёсткий — основной отбор по взвешенной оценке)
-export const DEFAULT_MIN_RATING = "4.0";
+// Минимальный рейтинг заведения (передаётся в Google Text Search API)
+export const DEFAULT_MIN_RATING = 4.0;
 
 export const MIN_REVIEW_COUNT = 3;
 
@@ -32,7 +32,7 @@ export const EXTRACT_MAX_TOKENS = 1024;
 export const ANALYZE_MAX_TOKENS = 4096;
 
 // ---------------------------------------------------------------------------
-// Google Places Nearby Search
+// Google Places Text Search (New)
 // ---------------------------------------------------------------------------
 
 /** Радиус поиска в метрах */
@@ -43,3 +43,18 @@ export const DEFAULT_OPENNOW = false;
 
 /** Задержка между страницами Google Places API (мс) — требование Google */
 export const PAGINATION_DELAY_MS = 2000;
+
+/** Поля, запрашиваемые у Google Text Search API (New) */
+export const TEXT_SEARCH_FIELD_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.shortFormattedAddress",
+  "places.location",
+  "places.rating",
+  "places.userRatingCount",
+  "places.types",
+  "places.primaryType",
+  "places.priceLevel",
+  "places.regularOpeningHours",
+  "places.businessStatus",
+].join(",");

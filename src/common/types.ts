@@ -9,10 +9,11 @@ export type PlaceType =
 export interface FindPlacesGoogleInput {
   // Обязательные
   url: string;
-  type: PlaceType;
+  textQuery: string;
   userPrompt?: string;
 
-  // Google Places Nearby Search
+  // Google Places Text Search (New)
+  includedType?: string;
   radius?: number;
   opennow?: boolean;
 

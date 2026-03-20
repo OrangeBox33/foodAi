@@ -3,7 +3,6 @@ import { analyzeReviews } from "./analyzeReviews.js";
 import { apifyReviewScraper } from "./apifyReviewScraper.js";
 import {
   DEFAULT_MAX_REVIEWS_PER_PLACE,
-  DEFAULT_MIN_RATING,
   DEFAULT_MAX_PLACES_FOR_REVIEWS,
   DEFAULT_OPENNOW,
 } from "./common/constants.js";
