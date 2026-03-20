@@ -13,15 +13,12 @@ export interface FindPlacesGoogleInput {
   userPrompt?: string;
 
   // Google Places Nearby Search
-  keyword?: string;
   radius?: number;
   opennow?: boolean;
   minprice?: 0 | 1 | 2 | 3 | 4;
   maxprice?: 0 | 1 | 2 | 3 | 4;
-  language?: string;
 
   // Лимиты
-  maxPlaces?: number;
   maxForReviews?: number;
   maxReviewsPerPlace?: number;
 
@@ -29,10 +26,9 @@ export interface FindPlacesGoogleInput {
   minRating?: number;
   minReviewCount?: number;
 
-  // Параметры Apify reviews scraper (compass/google-maps-reviews-scraper)
+  // Параметры Apify reviews scraper
   reviewsSort?: ReviewsSort;
   reviewsOrigin?: ReviewsOrigin;
-  personalData?: boolean;
   reviewsStartDate?: string;
 }
 

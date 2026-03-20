@@ -5,7 +5,6 @@ import type {
   PlaceType,
 } from "./common/types.js";
 import {
-  DEFAULT_MAX_PLACES,
   DEFAULT_SEARCH_RADIUS,
   PAGINATION_DELAY_MS,
 } from "./common/constants.js";
@@ -15,13 +14,10 @@ const NEARBY_SEARCH_URL =
 
 export interface GoogleNearbySearchParams {
   type: PlaceType;
-  keyword?: string;
   radius?: number;
   opennow?: boolean;
   minprice?: number;
   maxprice?: number;
-  language?: string;
-  maxPlaces?: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -64,7 +60,6 @@ export async function fetchNearbyPlaces(
   apiKey: string,
 ): Promise<GooglePlace[]> {
   console.log("fetchNearbyPlaces", { location, params });
-  const maxPlaces = params.maxPlaces ?? DEFAULT_MAX_PLACES;
   const results: GooglePlace[] = [];
 
   const baseParams: Record<string, string> = {
@@ -75,18 +70,15 @@ export async function fetchNearbyPlaces(
     rankby: "prominence",
   };
 
-  // keyword намеренно НЕ передаётся в Google API — без него возвращается максимум
-  // заведений (до 60). Фильтрация по keyword выполняется на клиенте в filterPlaces.
   if (params.opennow) baseParams.opennow = "true";
   if (params.minprice !== undefined)
     baseParams.minprice = String(params.minprice);
   if (params.maxprice !== undefined)
     baseParams.maxprice = String(params.maxprice);
-  if (params.language) baseParams.language = params.language;
 
   let pagetoken: string | undefined;
   let pagesLoaded = 0;
-  const maxPages = Math.ceil(Math.min(maxPlaces, 60) / 20);
+  const maxPages = 3; // 3 страницы × 20 = 60 заведений максимум
 
   do {
     const urlParams = new URLSearchParams(baseParams);
@@ -99,10 +91,10 @@ export async function fetchNearbyPlaces(
     pagetoken = data.next_page_token;
     pagesLoaded++;
 
-    if (pagetoken && pagesLoaded < maxPages && results.length < maxPlaces) {
+    if (pagetoken && pagesLoaded < maxPages) {
       await sleep(PAGINATION_DELAY_MS);
     }
-  } while (pagetoken && pagesLoaded < maxPages && results.length < maxPlaces);
+  } while (pagetoken && pagesLoaded < maxPages);
 
   return results;
 }

@@ -45,7 +45,6 @@ export async function mainGoogle(
   const filtered = filterPlaces(rawPlaces, {
     minRating,
     minReviewCount: input.minReviewCount,
-    keyword: input.keyword,
   });
   writeFileSync(
     "fetchNearbyPlacesFiltered.json",

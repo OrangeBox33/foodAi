@@ -24,35 +24,27 @@ Requires a `.env` file in the project root:
 ```
 GOOGLE_PLACES_API_KEY=...
 APIFY_API_TOKEN=...
-USE_APIFY=true   # optional; omit or set to false to use the Google path (default)
 ```
 
 ## Architecture
 
-This is a TypeScript Node.js library that finds and recommends nearby food venues. There are two pipelines, controlled by the `USE_APIFY` flag in `.env`:
+This is a TypeScript Node.js library that finds and recommends nearby food venues.
 
-- **Google path** (`src/google/`) — **PRIMARY and DEFAULT**. Apply all changes here unless explicitly asked to touch the Apify path.
-- **Apify path** (`src/index.ts`) — secondary pipeline using Apify actors.
+### Pipeline: `src/index.ts` → `mainGoogle`
 
-When `USE_APIFY=true` in `.env`, the Apify pipeline runs; otherwise the Google pipeline runs.
+1. **`parseIntentForGoogle`** (`src/parseIntentForGoogle.ts`) — converts a free-text user query (in Russian) into structured `IntentParams` using `claude-haiku-4-5` and the `set_search_params` tool. Produces: `type`, `radius`, `minprice`, `maxprice`, `minRating`, `minReviewCount`, `maxReviewsPerPlace`.
 
-### Google path (PRIMARY): `findPlaces` (`src/google/`)
+2. **`getLatLngFromGoogleMapsUrl`** (`src/resolveLocation.ts`) — takes a Google Maps short URL, follows redirects, and extracts `{lat, lng}`.
 
-Uses a Google Maps short URL instead of coordinates. `resolveLocation` follows redirects and extracts `{lat, lng}`, then calls Google Places Nearby Search API (paginated, 2s delay between pages), and shares the same review scraping and AI analysis steps. Requires `GOOGLE_PLACES_API_KEY`.
+3. **`fetchNearbyPlaces`** (`src/googlePlacesSearch.ts`) — calls Google Places Nearby Search API (paginated, 3 pages × 20 = max 60 results, 2s delay between pages). Returns raw `GooglePlace[]`. Requires `GOOGLE_PLACES_API_KEY`. `maxPlaces` is hardcoded to 60 and not configurable.
 
-### Apify path (SECONDARY): `findPlacesApify` (`src/index.ts`)
+4. **`filterPlaces` / `selectTopPlaces`** (`src/common/helpers/filter.ts`) — filters by `minRating` and `minReviewCount`, then selects top N places by score.
 
-1. **`parseIntentForApify`** (`src/parseIntentForApify.ts`) — converts a free-text user query (in Russian) into structured `ApifyIntentParams` using `claude-haiku-4-5` and the `set_search_params` tool.
+5. **`apifyReviewScraper`** (`src/apifyReviewScraper.ts`) — calls Apify actor `web_wanderer/google-reviews-scraper` with the filtered `place_id` list. Returns `ApifyReview[]`. Requires `APIFY_API_TOKEN`. `include_personal` is hardcoded to `false`.
 
-2. **`apifyPlacesScraper`** (`src/apifyPlacesScraper.ts`) — calls Apify actor `compass/crawler-google-places` with `{lat, lng, query, maxItems, zoom}`. Returns raw `ApifyPlace[]`.
+6. **`mapFlatReviewsForAI`** (`src/common/helpers/mapForAI.ts`) — groups flat `ApifyReview[]` by `placeId` into `PlaceForAI[]`, strips ads and reviews without text.
 
-3. **`filterApifyPlaces`** — filters by `minRating` and `minReviewCount`, maps `ApifyPlace` → `PlaceData`. Price level is parsed from `$`/`$$`/`$$$` strings.
-
-4. **`apifyReviewScraper`** (`src/apifyReviewScraper.ts`) — calls Apify actor `compass/google-maps-reviews-scraper` with the filtered `place_id` list. Blocking run, can take significant time.
-
-5. **`mapReviewsForAI`** (`src/common/helpers/mapForAI.ts`) — groups flat `ApifyReview[]` by `placeId` into `PlaceForAI[]`, strips ads and reviews without text, prefers `textTranslated` over `text`.
-
-6. **`analyzeReviews`** (`src/analyzeReviews.ts`) — two-stage AI pipeline:
+7. **`analyzeReviews`** (`src/analyzeReviews.ts`) — two-stage AI pipeline:
    - **Stage 1** (`extractPlaceSignals`): parallel calls to `claude-haiku-4-5` per place, using tool `extract_place_signals` to produce a `PlaceSignals` card (matchScore, confirmedSignals, redFlags, freshnessTrend, bestEvidence). Places with fewer than 3 text reviews are skipped (`insufficientData: true`). Failed calls don't abort the pipeline.
    - **Stage 2** (`rankPlaces`): single call to `claude-haiku-4-5` with all signal cards, using tool `give_recommendations`. Returns top-3 `PlaceRecommendation[]` and a `summary`.
 
@@ -64,13 +56,13 @@ Uses a Google Maps short URL instead of coordinates. `resolveLocation` follows r
 
 ### Supporting modules
 
-- `src/common/constants.ts` — all defaults (`DEFAULT_MAX_PLACES`, `DEFAULT_MIN_RATING`, `CLAUDE_MODEL`, token limits, etc.). Change defaults here, not at call sites.
+- `src/common/constants.ts` — all defaults (`DEFAULT_MAX_PLACES_FOR_REVIEWS`, `DEFAULT_MIN_RATING`, `CLAUDE_MODEL`, token limits, etc.). Change defaults here, not at call sites.
 - `src/common/helpers/usage.ts` — token tracking (`TokenUsage`) and cost calculation (`calcCost`) for `claude-haiku-4-5` pricing. The CLI prints a full cost report after each run.
-- `src/common/helpers/filter.ts` — `filterApifyPlaces` logic shared between pipelines.
+- `src/common/helpers/filter.ts` — `filterPlaces` and `selectTopPlaces` logic.
 
 ### Key Types (`src/common/types.ts`)
 
-- `FindPlacesInput` — main input to `findPlaces()`, includes Google Places params, filter thresholds, and Apify scraper options
+- `FindPlacesGoogleInput` — main input to `mainGoogle()`. Key fields: `url`, `type`, `radius`, `opennow`, `minprice`, `maxprice`, `maxForReviews`, `maxReviewsPerPlace`, `minRating`, `minReviewCount`, `reviewsSort`, `reviewsStartDate`. No `keyword`, `language`, `maxPlaces`, or `personalData` — these are either removed or hardcoded.
 - `PlaceData` — normalized Google Places result
 - `PlaceForAI` / `ReviewForAI` — trimmed structures passed to Claude
 - `ApifyReview` — raw Apify actor output shape

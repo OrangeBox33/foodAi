@@ -6,22 +6,24 @@
 |---|---|---|---|
 | `url` | string | — | обязательный |
 | `type` | PlaceType | — | обязательный |
-| `userPrompt` | string? | `""` | `mainGoogle.ts:70` |
-| `keyword` | string? | — | нет дефолта |
-| `radius` | number? | `500` | `googlePlacesSearch.ts:73` (константа `DEFAULT_SEARCH_RADIUS`) |
-| `opennow` | boolean? | `false` | `mainGoogle.ts:32` (константа `DEFAULT_OPENNOW`) |
+| `userPrompt` | string? | `""` | `mainGoogle.ts:68` |
+| `radius` | number? | `500` | `googlePlacesSearch.ts` (`DEFAULT_SEARCH_RADIUS`) |
+| `opennow` | boolean? | `false` | `mainGoogle.ts` (`DEFAULT_OPENNOW`) |
 | `minprice` | 0–4? | — | нет дефолта |
 | `maxprice` | 0–4? | — | нет дефолта |
-| `language` | string? | — | нет дефолта |
-| `maxPlaces` | number? | `100` | `googlePlacesSearch.ts:67` (константа `DEFAULT_MAX_PLACES`) |
-| `maxForReviews` | number? | `30` | `mainGoogle.ts:29` (константа `DEFAULT_MAX_PLACES_FOR_REVIEWS`) |
-| `maxReviewsPerPlace` | number? | `20` | `mainGoogle.ts:25` (константа `DEFAULT_MAX_REVIEWS_PER_PLACE`) |
-| `minRating` | number? | `1` | `mainGoogle.ts:27` (константа `DEFAULT_MIN_RATING`) |
-| `minReviewCount` | number? | `0` ⚠️ | `mainGoogle.ts:28` (константа `DEFAULT_MIN_REVIEW_COUNT`) |
-| `reviewsSort` | ReviewsSort? | — | нет дефолта |
+| `maxForReviews` | number? | `30` | `mainGoogle.ts` (`DEFAULT_MAX_PLACES_FOR_REVIEWS`) |
+| `maxReviewsPerPlace` | number? | `20` | `mainGoogle.ts` (`DEFAULT_MAX_REVIEWS_PER_PLACE`) |
+| `minRating` | number? | `1` | `mainGoogle.ts` (`DEFAULT_MIN_RATING`) |
+| `minReviewCount` | number? | нет ⚠️ | без дефолта — фильтр отключён если не передан |
+| `reviewsSort` | ReviewsSort? | `"newest"` | `apifyReviewScraper.ts` (`DEFAULT_REVIEWS_SORT`) |
 | `reviewsOrigin` | ReviewsOrigin? | — | нет дефолта |
-| `personalData` | boolean? | — | нет дефолта |
 | `reviewsStartDate` | string? | — | нет дефолта |
+
+**Не прокидываются / захардкожены:**
+- `maxPlaces` — всегда `60` (захардкожено через `Math.min(maxPlaces, 60)` в `googlePlacesSearch.ts:89`). Не экспонируется в input.
+- `personalData` — всегда `false` (захардкожено как `include_personal: false` в `apifyReviewScraper.ts:28`). Не прокидывается никуда.
+- `keyword` — не передаётся в Google API и не используется в фильтрации (код закомментирован в `filter.ts:35–38`).
+- `language` — присутствует в типе и передаётся в Google API, но в документации не нужен.
 
 ---
 
@@ -34,13 +36,13 @@ FindPlacesGoogleInput
         │       → LatLng
         │
         ├─► fetchNearbyPlaces(location, mergedInput, apiKey)   [googlePlacesSearch.ts]
-        │       Передаёт: type, keyword*, radius, opennow, minprice, maxprice, language, maxPlaces
-        │       * keyword намеренно НЕ передаётся в Google API (см. комментарий в коде)
+        │       Передаёт: type, radius, opennow, minprice, maxprice
+        │       maxPlaces = 60 (захардкожено)
         │       → GooglePlace[]  (rawPlaces)
         │
-        ├─► filterPlaces(rawPlaces, { minRating, minReviewCount, keyword })   [filter.ts]
-        │       Передаёт: minRating, minReviewCount, keyword
-        │       Дефолты применяются в mainGoogle.ts до этого вызова (строки 27–28)
+        ├─► filterPlaces(rawPlaces, { minRating, minReviewCount })   [filter.ts]
+        │       Дефолт minRating применяется в mainGoogle.ts до этого вызова
+        │       minReviewCount без дефолта — если undefined, фильтр пропускается
         │       → PlaceData[]  (filtered)
         │
         ├─► selectTopPlaces(filtered, maxForReviews)   [filter.ts]
@@ -48,6 +50,7 @@ FindPlacesGoogleInput
         │       → PlaceData[]  (places, топ-N)
         │
         ├─► apifyReviewScraper({ placeIds, limit: maxReviewsPerPlace, order: reviewsSort })
+        │       include_personal: false  (захардкожено)
         │       → { reviews, apifyCostUsd }
         │
         └─► analyzeReviews(placesForAI, places, userPrompt)
@@ -60,43 +63,47 @@ FindPlacesGoogleInput
 
 ### `src/common/constants.ts` — источник всех дефолтов
 ```ts
-DEFAULT_MAX_PLACES          = 100   // лимит Google API
 DEFAULT_MAX_PLACES_FOR_REVIEWS = 30 // сколько заведений скрапим
 DEFAULT_MAX_REVIEWS_PER_PLACE  = 20 // отзывов на заведение
 DEFAULT_MIN_RATING          = 1     // минимальный рейтинг
-DEFAULT_MIN_REVIEW_COUNT    = 0  ⚠️  // минимум отзывов (0 = фильтр отключён)
 DEFAULT_SEARCH_RADIUS       = 500   // радиус поиска, метры
 DEFAULT_OPENNOW             = false // только открытые
+DEFAULT_REVIEWS_SORT        = "newest"
 ```
 
-### `src/mainGoogle.ts:25–34` — применение дефолтов к input
+### `src/mainGoogle.ts` — применение дефолтов к input
 ```ts
 const maxReviewsPerPlace = input.maxReviewsPerPlace ?? DEFAULT_MAX_REVIEWS_PER_PLACE;
 const minRating          = input.minRating          ?? DEFAULT_MIN_RATING;
-const minReviewCount     = input.minReviewCount     ?? DEFAULT_MIN_REVIEW_COUNT;  // ← 0!
 const maxForReviews      = input.maxForReviews      ?? DEFAULT_MAX_PLACES_FOR_REVIEWS;
 
-const mergedInput = { opennow: DEFAULT_OPENNOW, ...input };  // opennow дефолт тут
+const mergedInput = { opennow: DEFAULT_OPENNOW, ...input };
 ```
 
-### `src/googlePlacesSearch.ts:67–74` — дефолты для Google API запроса
+### `src/googlePlacesSearch.ts` — лимит страниц
 ```ts
-const maxPlaces = params.maxPlaces ?? DEFAULT_MAX_PLACES;
-radius: params.radius ?? DEFAULT_SEARCH_RADIUS
+const maxPages = Math.ceil(Math.min(maxPlaces, 60) / 20);
+// → всегда 3 страницы × 20 = максимум 60 заведений
 ```
 
 ---
 
 ## Проблема с `minReviewCount`
 
-`DEFAULT_MIN_REVIEW_COUNT = 0` → фильтр отключён по дефолту, все заведения проходят.
+В `mainGoogle.ts:47` передаётся напрямую как `input.minReviewCount` — **без дефолта**.
+В `filter.ts:32`: если `undefined`, фильтр пропускается, все заведения проходят.
 
-Чтобы исправить — поменяй в `src/common/constants.ts`:
+Итог: сейчас заведения с 0 отзывов могут попасть в выдачу.
+
+Чтобы исправить — добавь дефолт в `src/common/constants.ts`:
 ```ts
-export const DEFAULT_MIN_REVIEW_COUNT = 50; // или нужное значение
+export const DEFAULT_MIN_REVIEW_COUNT = 50;
 ```
-
-Либо передавай явно при вызове:
+И примени в `mainGoogle.ts`:
 ```ts
-mainGoogle({ ..., minReviewCount: 50 })
+const minReviewCount = input.minReviewCount ?? DEFAULT_MIN_REVIEW_COUNT;
+```
+Затем передай в `filterPlaces`:
+```ts
+filterPlaces(rawPlaces, { minRating, minReviewCount })
 ```

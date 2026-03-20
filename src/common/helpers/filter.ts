@@ -3,7 +3,6 @@ import type { GooglePlace, PlaceData } from "../types.js";
 interface FilterOptions {
   minRating: number;
   minReviewCount?: number;
-  keyword?: string;
 }
 
 function mapToPlaceData(place: GooglePlace): PlaceData {
@@ -25,17 +24,11 @@ export function filterPlaces(
   rawPlaces: GooglePlace[],
   options: FilterOptions,
 ): PlaceData[] {
-  const kw = options.keyword?.toLowerCase().trim();
   return rawPlaces
     .filter((place) => {
       if ((place.rating ?? 0) < options.minRating) return false;
       if (options.minReviewCount !== undefined && (place.user_ratings_total ?? 0) < options.minReviewCount)
         return false;
-      // if (kw) {
-      //   const inName = place.name?.toLowerCase().includes(kw) ?? false;
-      //   const inVicinity = place.vicinity?.toLowerCase().includes(kw) ?? false;
-      //   if (!inName && !inVicinity) return false;
-      // }
       return true;
     })
     .map(mapToPlaceData);

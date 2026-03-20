@@ -11,13 +11,11 @@ const client = new Anthropic();
 
 export interface IntentParams {
   type: PlaceType;
-  keyword?: string;
   radius?: number;
   minprice?: 0 | 1 | 2 | 3 | 4;
   maxprice?: 0 | 1 | 2 | 3 | 4;
   minRating?: number;
   minReviewCount?: number;
-  maxPlaces?: number;
   maxReviewsPerPlace?: number;
 }
 
@@ -50,13 +48,6 @@ const TOOL: Anthropic.Tool = {
         ],
         description: "Тип заведения",
       },
-      keyword: {
-        type: "string",
-        description:
-          "Ключевое слово на английском для уточнения поиска: кухня (sushi, pizza), " +
-          "атмосфера (romantic, cozy, rooftop), концепция (brunch, wine bar). " +
-          "Не указывай если нет конкретного уточнения.",
-      },
       radius: {
         type: "number",
         description:
@@ -88,12 +79,6 @@ const TOOL: Anthropic.Tool = {
         description:
           "Минимум отзывов (по умолчанию 15). Увеличь до 50–100 если важна проверенность места.",
       },
-      maxPlaces: {
-        type: "number",
-        enum: [20, 40, 60],
-        description:
-          "Количество заведений для обработки. Не указывай без причины (по умолчанию 20).",
-      },
       maxReviewsPerPlace: {
         type: "number",
         description:
@@ -114,8 +99,7 @@ const SYSTEM_PROMPT = `Ты — помощник для поиска завед�
 
 Принципы:
 - Устанавливай только те параметры, которые явно следуют из запроса. Лишние параметры ухудшают результат.
-- Если запрос подразумевает недорогое место, то ставь maxprice=2. 
-- Keyword должен быть конкретным и на английском: "pizza", "romantic", "rooftop terrace", "vegan". Не пиши абстрактное вроде "good food".
+- Если запрос подразумевает недорогое место, то ставь maxprice=2.
 - Если запрос подразумевает особое место (романтический ужин, деловая встреча, день рождения) — повышай minRating до 4.5.`;
 
 // ---------------------------------------------------------------------------

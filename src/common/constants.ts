@@ -1,6 +1,3 @@
-/** Максимальное число заведений на этапе поиска */
-export const DEFAULT_MAX_PLACES = 100;
-
 /** Число заведений, по которым скрапим отзывы (выбираются из найденных) */
 export const DEFAULT_MAX_PLACES_FOR_REVIEWS = 30;
 
