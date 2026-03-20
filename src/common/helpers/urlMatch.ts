@@ -7,11 +7,3 @@ export function extractGoogleMapsUrl(prompt: string): string {
   }
   return match[0];
 }
-
-// Заменяет KEYWORD в URL вида /maps/search/KEYWORD/@lat,lng,zoom
-export function replaceGoogleMapsKeyword(url: string, keyword: string): string {
-  return url.replace(
-    /(\/maps\/search\/)[^/@]+/,
-    `$1${keyword.replace(/\s+/g, "+")}`,
-  );
-}

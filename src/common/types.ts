@@ -105,62 +105,6 @@ export interface PlaceForAI {
   reviews: ReviewForAI[];
 }
 
-// --- Apify: places scraper (альтернатива Google Places API) ---
-
-export interface FindPlacesApifyInput {
-  // Google Maps search URL (e.g. "https://www.google.com/maps/search/cafe/@lat,lng,17z")
-  url: string;
-
-  userPrompt?: string;
-  maxPlaces?: number;
-  maxForReviews?: number;
-  maxReviewsPerPlace?: number;
-
-  // Фильтры
-  minRating?: number;
-  minReviewCount?: number;
-
-  // Параметры Apify scraper
-  reviewsSort?: ReviewsSort;
-  reviewsOrigin?: ReviewsOrigin;
-  personalData?: boolean;
-  reviewsStartDate?: string;
-  language?: string;
-
-  [key: string]: unknown;
-}
-
-// Встроенный отзыв в выдаче compass/crawler-google-places
-export interface ApifyPlaceReview {
-  reviewerNumberOfReviews: number | null;
-  isLocalGuide: boolean | null;
-  text: string | null;
-  textTranslated: string | null;
-  publishAt: string;
-  publishedAtDate: string;
-  likesCount: number;
-  reviewOrigin: string;
-  stars: number;
-}
-
-// Сырой объект заведения из Apify compass/crawler-google-places (с вложенными отзывами)
-export interface ApifyPlace {
-  title: string;
-  totalScore: number | null;
-  reviewsCount: number | null;
-  street: string | null;
-  city: string | null;
-  state: string | null;
-  countryCode: string | null;
-  website: string | null;
-  phone: string | null;
-  categories: string[];
-  url: string;
-  categoryName: string | null;
-  price: string | null;
-  reviews: ApifyPlaceReview[];
-}
-
 // --- Apify: compass/google-maps-reviews-scraper ---
 
 export type ReviewsSort =

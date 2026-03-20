@@ -14,11 +14,7 @@ export const DEFAULT_MIN_RATING = 1;
 // Apify Places scraper (compass/crawler-google-places)
 // ---------------------------------------------------------------------------
 
-/** Язык результатов поиска и отзывов */
-export const DEFAULT_LANGUAGE = "en";
 export const DEFAULT_REVIEWS_SORT = "newest";
-export const DEFAULT_REVIEWS_ORIGIN = "all";
-export const DEFAULT_PERSONAL_DATA = false;
 
 // ---------------------------------------------------------------------------
 // AI модель
@@ -45,12 +41,6 @@ export const DEFAULT_SEARCH_RADIUS = 500;
 
 /** Показывать только открытые прямо сейчас */
 export const DEFAULT_OPENNOW = false;
-
-/** Минимальный ценовой уровень (0 = бесплатно) */
-export const DEFAULT_MIN_PRICE = 0;
-
-/** Максимальный ценовой уровень (3 = $$$) */
-export const DEFAULT_MAX_PRICE = 3;
 
 /** Задержка между страницами Google Places API (мс) — требование Google */
 export const PAGINATION_DELAY_MS = 2000;
