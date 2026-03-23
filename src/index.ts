@@ -15,8 +15,8 @@ const isMain =
 
 if (isMain) {
   const userPrompt =
-    "Хочу поесть вьетнамской или азиатской еды. Быстрая еда. Блюда из риса желательно. формат столовки - пришёл, наложили, поел! https://maps.app.goo.gl/oh1uKVZkrqcsGvsx9 поиск по 10 заведениям, по 10 отзывов в каждом. радиус 300м.";
-
+    "textQuery=local restaurant. https://maps.app.goo.gl/UwU2KdidD8R1bcK28 поиск по 10 заведениям, по 10 отзывов в каждом. радиус 1000м.";
+  // Хочу поесть вьетнамской или азиатской еды. Быстрая еда. Блюда из риса желательно. формат столовки - пришёл, наложили, поел!
   console.log(`Запрос: "${userPrompt}"\n`);
 
   const baseUrl = extractGoogleMapsUrl(userPrompt);

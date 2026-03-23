@@ -80,11 +80,25 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function circleToRectangle(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+): { low: { latitude: number; longitude: number }; high: { latitude: number; longitude: number } } {
+  const deltaLat = radiusMeters / 111320;
+  const deltaLng = radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180));
+  return {
+    low: { latitude: lat - deltaLat, longitude: lng - deltaLng },
+    high: { latitude: lat + deltaLat, longitude: lng + deltaLng },
+  };
+}
+
 function buildRequestBody(
   params: GoogleTextSearchParams,
   location: LatLng,
   pageToken?: string,
 ): Record<string, unknown> {
+  const radius = params.radius ?? DEFAULT_SEARCH_RADIUS;
   const body: Record<string, unknown> = {
     textQuery: params.textQuery,
     languageCode: "en",
@@ -92,13 +106,7 @@ function buildRequestBody(
     pageSize: 20,
     minRating: DEFAULT_MIN_RATING,
     locationRestriction: {
-      circle: {
-        center: {
-          latitude: location.lat,
-          longitude: location.lng,
-        },
-        radius: params.radius ?? DEFAULT_SEARCH_RADIUS,
-      },
+      rectangle: circleToRectangle(location.lat, location.lng, radius),
     },
   };
 
