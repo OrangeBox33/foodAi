@@ -1,3 +1,5 @@
+export type GridSplit = 4 | 9;
+
 export type PlaceType =
   | "restaurant"
   | "cafe"
@@ -28,6 +30,9 @@ export interface FindPlacesGoogleInput {
   reviewsSort?: ReviewsSort;
   reviewsOrigin?: ReviewsOrigin;
   reviewsStartDate?: string;
+
+  // Сетка поиска
+  gridSplit?: GridSplit;
 }
 
 export interface LatLng {

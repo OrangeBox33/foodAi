@@ -31,7 +31,7 @@ export async function mainGoogle(
 
   const location = await getLatLngFromGoogleMapsUrl(input.url);
 
-  const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey);
+  const rawPlaces = await fetchNearbyPlaces(location, mergedInput, apiKey, input.gridSplit);
   writeFileSync(
     "./debug/fetchNearbyPlacesInput.json",
     JSON.stringify({ location, mergedInput }, null, 2),

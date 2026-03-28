@@ -1,8 +1,7 @@
-import type { GooglePlace, LatLng } from "./common/types.js";
+import type { GooglePlace, GridSplit, LatLng } from "./common/types.js";
 import {
   DEFAULT_MIN_RATING,
   DEFAULT_SEARCH_RADIUS,
-  PAGINATION_DELAY_MS,
   TEXT_SEARCH_FIELD_MASK,
 } from "./common/constants.js";
 
@@ -76,38 +75,47 @@ function mapToGooglePlace(place: TextSearchPlace): GooglePlace {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+type Rectangle = {
+  low: { latitude: number; longitude: number };
+  high: { latitude: number; longitude: number };
+};
 
-function circleToRectangle(
+function splitIntoGrid(
   lat: number,
   lng: number,
   radiusMeters: number,
-): { low: { latitude: number; longitude: number }; high: { latitude: number; longitude: number } } {
+  gridSplit: GridSplit,
+): Rectangle[] {
   const deltaLat = radiusMeters / 111320;
   const deltaLng = radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180));
-  return {
-    low: { latitude: lat - deltaLat, longitude: lng - deltaLng },
-    high: { latitude: lat + deltaLat, longitude: lng + deltaLng },
-  };
+  const n = Math.sqrt(gridSplit); // 2 для 4, 3 для 9
+  const cellLat = (2 * deltaLat) / n;
+  const cellLng = (2 * deltaLng) / n;
+  const rects: Rectangle[] = [];
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      const lowLat = lat - deltaLat + row * cellLat;
+      const lowLng = lng - deltaLng + col * cellLng;
+      rects.push({
+        low: { latitude: lowLat, longitude: lowLng },
+        high: { latitude: lowLat + cellLat, longitude: lowLng + cellLng },
+      });
+    }
+  }
+  return rects;
 }
 
 function buildRequestBody(
   params: GoogleTextSearchParams,
-  location: LatLng,
-  pageToken?: string,
+  rectangle: Rectangle,
 ): Record<string, unknown> {
-  const radius = params.radius ?? DEFAULT_SEARCH_RADIUS;
   const body: Record<string, unknown> = {
     textQuery: params.textQuery,
     languageCode: "en",
     rankPreference: "RELEVANCE",
     pageSize: 20,
     minRating: DEFAULT_MIN_RATING,
-    locationRestriction: {
-      rectangle: circleToRectangle(location.lat, location.lng, radius),
-    },
+    locationRestriction: { rectangle },
   };
 
   if (params.includedType) {
@@ -115,9 +123,6 @@ function buildRequestBody(
   }
   if (params.opennow) {
     body.openNow = true;
-  }
-  if (pageToken) {
-    body.pageToken = pageToken;
   }
 
   return body;
@@ -163,33 +168,40 @@ export async function fetchNearbyPlaces(
   location: LatLng,
   params: GoogleTextSearchParams,
   apiKey: string,
+  gridSplit: GridSplit = 4,
 ): Promise<GooglePlace[]> {
-  console.log("fetchNearbyPlaces (Text Search)", { location, params });
+  console.log(`fetchNearbyPlaces (Text Search, ${gridSplit} cells)`, {
+    location,
+    params,
+  });
+  const radius = params.radius ?? DEFAULT_SEARCH_RADIUS;
+  const cells = splitIntoGrid(location.lat, location.lng, radius, gridSplit);
+
+  const responses = await Promise.all(
+    cells.map((rect, i) => {
+      const body = buildRequestBody(params, rect);
+      console.log(`[Cell ${i + 1}/${gridSplit}]`);
+      return fetchPage(body, apiKey);
+    }),
+  );
+
+  // Объединяем результаты, дедуплицируем по place_id
+  const seen = new Set<string>();
   const results: GooglePlace[] = [];
-
-  let pageToken: string | undefined;
-  let pagesLoaded = 0;
-  const maxPages = 3; // 3 страницы × 20 = 60 заведений максимум
-
-  do {
-    const body = buildRequestBody(params, location, pageToken);
-    const data = await fetchPage(body, apiKey);
-
-    if (data.places) {
-      results.push(...data.places.map(mapToGooglePlace));
-    } else if (pagesLoaded === 0) {
-      console.log(
-        "[Google Text Search API] Нет результатов по заданным параметрам",
-      );
+  for (const data of responses) {
+    if (!data.places) continue;
+    console.log("data.places.length", data.places.length);
+    for (const place of data.places) {
+      const mapped = mapToGooglePlace(place);
+      if (!seen.has(mapped.place_id)) {
+        seen.add(mapped.place_id);
+        results.push(mapped);
+      }
     }
+  }
 
-    pageToken = data.nextPageToken;
-    pagesLoaded++;
-
-    if (pageToken && pagesLoaded < maxPages) {
-      await sleep(PAGINATION_DELAY_MS);
-    }
-  } while (pageToken && pagesLoaded < maxPages);
-
+  console.log(
+    `[fetchNearbyPlaces] Итого уникальных заведений: ${results.length}`,
+  );
   return results;
 }
